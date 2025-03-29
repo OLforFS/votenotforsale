@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
     <title>Vote Not For Sale - Electoral Integrity Pledge</title>
     <style>
         /* Reset and base styles */
@@ -352,24 +355,95 @@
         const successMessage = document.getElementById('success-message');
         const pledgesList = document.getElementById('pledges-list');
         
-        // Show modal
-        pledgeBtn.addEventListener('click', () => {
+        // Enhanced Webview detection
+        const isInWebView = () => {
+            // Check for common webview user agents and environments
+            const ua = navigator.userAgent.toLowerCase();
+            return ua.indexOf('wv') > -1 || // Android WebView
+                   ua.indexOf('webview') > -1 || // Generic WebView
+                   ua.indexOf('fbav') > -1 || // Facebook WebView
+                   ua.indexOf('instagram') > -1 || // Instagram WebView
+                   ua.indexOf('line') > -1 || // LINE WebView
+                   ua.indexOf('twitter') > -1 || // Twitter WebView
+                   (window.webkit && window.webkit.messageHandlers) || // iOS WKWebView
+                   (window.ReactNativeWebView) || // React Native WebView
+                   (window.flutter_inappwebview) || // Flutter InAppWebView
+                   (window.MSStream && !window.MSPointerEvent) || // IE Mobile WebView
+                   (typeof window.Android !== 'undefined') || // Android JavascriptInterface
+                   (typeof window.webkit !== 'undefined'); // iOS JavascriptInterface
+        };
+        
+        // Apply enhanced webview-specific adjustments
+        if (isInWebView()) {
+            // Prevent bounce/overscroll effect in iOS WebView
+            document.body.style.overscrollBehavior = 'none';
+            document.documentElement.style.overscrollBehavior = 'none';
+            
+            // Disable text selection for better touch experience
+            document.body.style.webkitUserSelect = 'none';
+            document.body.style.userSelect = 'none';
+            
+            // Improve touch response
+            document.body.style.touchAction = 'manipulation';
+            
+            // Fix viewport issues in some webviews
+            const viewportMeta = document.querySelector('meta[name="viewport"]');
+            if (viewportMeta) {
+                viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+            }
+            
+            // Add class for webview-specific CSS
+            document.body.classList.add('webview-active');
+            
+            // Disable pull-to-refresh in Android WebView
+            document.addEventListener('touchmove', function(e) {
+                if (document.documentElement.scrollTop === 0) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
+        
+        // Show modal - with both click and touch support
+        pledgeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
             modalOverlay.classList.add('active');
         });
         
+        // Add touch event for better mobile response
+        pledgeBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            modalOverlay.classList.add('active');
+        }, false);
+        
         // Hide modal
-        closeModal.addEventListener('click', () => {
+        closeModal.addEventListener('click', (e) => {
+            e.preventDefault();
             modalOverlay.classList.remove('active');
             successMessage.style.display = 'none';
         });
         
-        // Close modal when clicking outside
+        // Add touch event for close button
+        closeModal.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            modalOverlay.classList.remove('active');
+            successMessage.style.display = 'none';
+        }, false);
+        
+        // Close modal when clicking/touching outside
         modalOverlay.addEventListener('click', (e) => {
             if (e.target === modalOverlay) {
                 modalOverlay.classList.remove('active');
                 successMessage.style.display = 'none';
             }
         });
+        
+        modalOverlay.addEventListener('touchend', (e) => {
+            if (e.target === modalOverlay) {
+                e.preventDefault();
+                modalOverlay.classList.remove('active');
+                successMessage.style.display = 'none';
+            }
+        }, false);
         
         // Form submission
         pledgeForm.addEventListener('submit', (e) => {
@@ -468,6 +542,109 @@
                 font-size: 0.8rem !important;
             }
         }
+        
+        /* Enhanced Webview-specific styles */
+        .webview-active * {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+        
+        .webview-active body {
+            /* Prevent rubber-band scrolling */
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+        
+        .webview-active .modal {
+            /* Improve modal performance in webviews */
+            transform: translateZ(0);
+            backface-visibility: hidden;
+            perspective: 1000px;
+        }
+        
+        .webview-active input, .webview-active textarea {
+            /* Improve form input performance */
+            -webkit-appearance: none;
+            appearance: none;
+            border-radius: 0;
+        }
+        
+        /* Improve touch targets for better usability */
+        .btn, .close-modal, input[type="submit"] {
+            min-height: 44px; /* Apple's recommended minimum touch target size */
+            min-width: 44px;
+            touch-action: manipulation;
+        }
+        
+        /* Prevent text selection on interactive elements */
+        .btn, .close-modal, .logo, .modal-title {
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        
+        /* Smooth scrolling for modal */
+        .modal {
+            -webkit-overflow-scrolling: touch;
+            scroll-behavior: smooth;
+        }
+        
+        /* Optimize animations for webview */
+        .webview-active .hero h1 {
+            animation: none; /* Disable animations for better performance */
+        }
+        
+        /* Fix for iOS form input zoom */
+        @media screen and (max-width: 768px) {
+            .webview-active input, .webview-active textarea, .webview-active select {
+                font-size: 16px; /* Prevent iOS zoom on focus */
+            }
+        }
     </style>
+    
+    <script>
+        // Enhanced webview detection and optimization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Use the enhanced isInWebView function for consistency
+            if (isInWebView()) {
+                console.log('WebView detected - applying optimizations');
+                document.body.classList.add('webview-active');
+                
+                // Disable zoom gestures
+                document.addEventListener('gesturestart', function(e) {
+                    e.preventDefault();
+                });
+                
+                // Fix for iOS form focus issues
+                const inputs = document.querySelectorAll('input, textarea');
+                inputs.forEach(input => {
+                    input.addEventListener('focus', function() {
+                        // Add a small delay to ensure proper scrolling to the input
+                        setTimeout(() => {
+                            // Scroll the input into view
+                            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }, 300);
+                    });
+                });
+                
+                // Detect and handle back button in Android WebView
+                if (window.history && window.history.pushState) {
+                    window.addEventListener('popstate', function(e) {
+                        // If modal is open, close it instead of navigating back
+                        if (modalOverlay.classList.contains('active')) {
+                            e.preventDefault();
+                            modalOverlay.classList.remove('active');
+                            successMessage.style.display = 'none';
+                            return false;
+                        }
+                    });
+                    
+                    // Add a dummy state to handle back button
+                    window.history.pushState({ page: 1 }, '', '');
+                }
+            }
+        });
+    </script>
 </body>
 </html>
