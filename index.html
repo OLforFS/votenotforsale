@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vote Not For Sale - Electoral Integrity Pledge</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        /* Responsive breakpoints */
+        /* Mobile devices */
+        @media screen and (max-width: 480px) {
+            .hero h1 {
+                font-size: 1.4rem;
+                padding: 10px 15px;
+            }
+            
+            .hero p {
+                font-size: 1rem;
+            }
+            
+            .modal {
+                width: 95%;
+                padding: 1.5rem;
+            }
+            
+            .modal-title {
+                font-size: 1.2rem;
+            }
+            
+            .btn {
+                padding: 0.7rem 1.2rem;
+            }
+            
+            header {
+                padding: 0.8rem 1rem;
+            }
+            
+            .logo {
+                font-size: 1.2rem;
+            }
+        }
+        
+        /* Tablets */
+        @media screen and (min-width: 481px) and (max-width: 768px) {
+            .hero h1 {
+                font-size: 1.96rem;
+            }
+            
+            .hero p {
+                font-size: 1.1rem;
+            }
+        }
+        
+        body {
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f8f8;
+        }
+        
+        /* Header styles */
+        header {
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 1rem 2rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        /* Hero section */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+        }
+        
+        .hero h1 {
+            font-size: 2.45rem;
+            margin-bottom: 1.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            animation: pulse 2s infinite;
+            padding: 15px 30px;
+            border: 3px solid rgba(255,255,255,0.7);
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(255,255,255,0.5);
+            background-color: rgba(0,0,0,0.2);
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin-bottom: 2rem;
+        }
+        
+        /* Button styles */
+        .btn {
+            display: inline-block;
+            padding: 0.8rem 1.5rem;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .btn:hover {
+            background-color: #c0392b;
+        }
+        
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal-overlay.active .modal {
+            transform: translateY(0);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+        
+        /* Form styles */
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        @media screen and (max-width: 480px) {
+            input, textarea {
+                padding: 0.6rem;
+                font-size: 0.9rem;
+            }
+            
+            .form-group {
+                margin-bottom: 1rem;
+            }
+        }
+        
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .required {
+            color: #e74c3c;
+        }
+        
+        /* Success message */
+        .success-message {
+            background-color: #2ecc71;
+            color: white;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+        
+        /* Pledges list */
+        .pledges-container {
+            margin-top: 2rem;
+        }
+        
+        .pledges-list {
+            list-style: none;
+        }
+        
+        .pledge-item {
+            background-color: #f9f9f9;
+            border-left: 4px solid #3498db;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .pledge-meta {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 0.5rem;
+        }
+        
+        @media screen and (max-width: 480px) {
+            .pledges-container {
+                margin-top: 1.5rem;
+            }
+            
+            .pledge-item {
+                padding: 0.8rem;
+                margin-bottom: 0.8rem;
+            }
+            
+            .pledge-meta {
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="logo">Vote Not For Sale</div>
+    </header>
+    
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>MY VOTE IS NOT FOR SALE</h1>
+        <p>A commitment to electoral integrity. Protect Democracy by Taking a Stand. Your vote is your voice in our democracy. By taking this pledge, you're committing to protecting the integrity of our electoral process and standing against corruption.</p>
+        <button class="btn" id="pledge-btn">TAKE THE PLEDGE</button>
+    </section>
+    
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Take the Electoral Integrity Pledge</h2>
+                <button class="close-modal" id="close-modal">&times;</button>
+            </div>
+            
+            <div class="success-message" id="success-message">
+                Your pledge has been recorded. Thank you for standing up for electoral integrity!
+            </div>
+            
+            <form id="pledge-form">
+                <div class="form-group">
+                    <label for="name">Name <span class="required">*</span></label>
+                    <input type="text" id="name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="city">City or Municipality <span class="required">*</span></label>
+                    <input type="text" id="city" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email (optional)</label>
+                    <input type="email" id="email">
+                </div>
+                
+
+                
+                <button type="submit" class="btn">Submit Pledge</button>
+            </form>
+            
+
+            
+            <div class="pledges-container">
+                <h3>Recent Pledges</h3>
+                <ul class="pledges-list" id="pledges-list">
+                    <!-- Pledges will be inserted here by JavaScript -->
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // DOM Elements
+        const pledgeBtn = document.getElementById('pledge-btn');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const closeModal = document.getElementById('close-modal');
+        const pledgeForm = document.getElementById('pledge-form');
+        const successMessage = document.getElementById('success-message');
+        const pledgesList = document.getElementById('pledges-list');
+        
+        // Show modal
+        pledgeBtn.addEventListener('click', () => {
+            modalOverlay.classList.add('active');
+        });
+        
+        // Hide modal
+        closeModal.addEventListener('click', () => {
+            modalOverlay.classList.remove('active');
+            successMessage.style.display = 'none';
+        });
+        
+        // Close modal when clicking outside
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.classList.remove('active');
+                successMessage.style.display = 'none';
+            }
+        });
+        
+        // Form submission
+        pledgeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Get form values
+            const name = document.getElementById('name').value;
+            const city = document.getElementById('city').value;
+            const email = document.getElementById('email').value;
+            
+            // Create pledge object
+            const pledge = {
+                name,
+                city,
+                email,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Save to localStorage
+            savePledge(pledge);
+            
+            // Show success message
+            successMessage.style.display = 'block';
+            
+            // Reset form
+            pledgeForm.reset();
+            
+            // Update pledges list
+            displayPledges();
+        });
+        
+        // Save pledge to localStorage
+        function savePledge(pledge) {
+            // Get existing pledges or initialize empty array
+            let pledges = JSON.parse(localStorage.getItem('pledges')) || [];
+            
+            // Add new pledge
+            pledges.push(pledge);
+            
+            // Save back to localStorage
+            localStorage.setItem('pledges', JSON.stringify(pledges));
+        }
+        
+        // Display pledges from localStorage
+        function displayPledges() {
+            // Clear current list
+            pledgesList.innerHTML = '';
+            
+            // Get pledges from localStorage
+            const pledges = JSON.parse(localStorage.getItem('pledges')) || [];
+            
+            // Sort pledges by timestamp (newest first)
+            pledges.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            // Display only the 5 most recent pledges
+            const recentPledges = pledges.slice(0, 5);
+            
+            // Create HTML for each pledge
+            recentPledges.forEach(pledge => {
+                const li = document.createElement('li');
+                li.className = 'pledge-item';
+                
+                const date = new Date(pledge.timestamp);
+                const formattedDate = date.toLocaleDateString();
+                
+                li.innerHTML = `
+                    <div class="pledge-meta">${pledge.name} from ${pledge.city} - ${formattedDate}</div>
+                `;
+                
+                pledgesList.appendChild(li);
+            });
+        }
+        
+        // Display pledges on page load
+        document.addEventListener('DOMContentLoaded', displayPledges);
+    </script>
+    
+    <!-- Footer -->
+    <footer style="text-align: center; padding: 1rem; background-color: #f8f8f8; margin-top: 2rem; border-top: 1px solid #ddd;">
+        <p style="font-size: 0.9rem;">© 2025 Vote Not For Sale Initiative. All rights reserved.</p>
+    </footer>
+    
+    <style>
+        /* Additional responsive styles */
+        @media screen and (max-width: 480px) {
+            .hero {
+                padding: 1rem;
+            }
+            
+            footer {
+                padding: 0.8rem;
+                margin-top: 1.5rem;
+            }
+            
+            footer p {
+                font-size: 0.8rem !important;
+            }
+        }
+    </style>
+</body>
+</html>
