@@ -337,12 +337,7 @@
             
 
             
-            <div class="pledges-container">
-                <h3>Recent Pledges</h3>
-                <ul class="pledges-list" id="pledges-list">
-                    <!-- Pledges will be inserted here by JavaScript -->
-                </ul>
-            </div>
+
         </div>
     </div>
     
@@ -353,24 +348,56 @@
         const closeModal = document.getElementById('close-modal');
         const pledgeForm = document.getElementById('pledge-form');
         const successMessage = document.getElementById('success-message');
-        const pledgesList = document.getElementById('pledges-list');
+        // pledgesList element removed
         
-        // Enhanced Webview detection
+        // Enhanced Webview detection with improved platform coverage
         const isInWebView = () => {
             // Check for common webview user agents and environments
             const ua = navigator.userAgent.toLowerCase();
-            return ua.indexOf('wv') > -1 || // Android WebView
-                   ua.indexOf('webview') > -1 || // Generic WebView
-                   ua.indexOf('fbav') > -1 || // Facebook WebView
-                   ua.indexOf('instagram') > -1 || // Instagram WebView
-                   ua.indexOf('line') > -1 || // LINE WebView
-                   ua.indexOf('twitter') > -1 || // Twitter WebView
-                   (window.webkit && window.webkit.messageHandlers) || // iOS WKWebView
-                   (window.ReactNativeWebView) || // React Native WebView
-                   (window.flutter_inappwebview) || // Flutter InAppWebView
-                   (window.MSStream && !window.MSPointerEvent) || // IE Mobile WebView
-                   (typeof window.Android !== 'undefined') || // Android JavascriptInterface
-                   (typeof window.webkit !== 'undefined'); // iOS JavascriptInterface
+            
+            // Store detection result in sessionStorage to avoid recalculating
+            if (sessionStorage.getItem('isWebView') !== null) {
+                return sessionStorage.getItem('isWebView') === 'true';
+            }
+            
+            // Platform-specific detection methods
+            const androidWebView = ua.indexOf('wv') > -1;
+            const genericWebView = ua.indexOf('webview') > -1;
+            
+            // Social media app webviews
+            const facebookWebView = ua.indexOf('fbav') > -1 || ua.indexOf('fban') > -1;
+            const instagramWebView = ua.indexOf('instagram') > -1;
+            const lineWebView = ua.indexOf('line') > -1;
+            const twitterWebView = ua.indexOf('twitter') > -1;
+            const linkedinWebView = ua.indexOf('linkedin') > -1;
+            
+            // Mobile app webviews
+            const iosWKWebView = typeof window.webkit !== 'undefined' && window.webkit.messageHandlers;
+            const reactNativeWebView = typeof window.ReactNativeWebView !== 'undefined';
+            const flutterWebView = typeof window.flutter_inappwebview !== 'undefined';
+            const cordovaWebView = typeof window.cordova !== 'undefined';
+            const capacitorWebView = typeof window.Capacitor !== 'undefined';
+            
+            // Additional platform checks
+            const ieWebView = window.MSStream && !window.MSPointerEvent;
+            const androidInterface = typeof window.Android !== 'undefined';
+            const iosInterface = typeof window.webkit !== 'undefined';
+            
+            // Check for standalone mode (added to home screen)
+            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+            
+            // Combined result
+            const result = androidWebView || genericWebView || 
+                          facebookWebView || instagramWebView || lineWebView || 
+                          twitterWebView || linkedinWebView || iosWKWebView || 
+                          reactNativeWebView || flutterWebView || cordovaWebView || 
+                          capacitorWebView || ieWebView || androidInterface || 
+                          iosInterface || isStandalone;
+            
+            // Cache the result
+            sessionStorage.setItem('isWebView', result.toString());
+            
+            return result;
         };
         
         // Apply enhanced webview-specific adjustments
@@ -470,9 +497,6 @@
             
             // Reset form
             pledgeForm.reset();
-            
-            // Update pledges list
-            displayPledges();
         });
         
         // Save pledge to localStorage
@@ -487,38 +511,9 @@
             localStorage.setItem('pledges', JSON.stringify(pledges));
         }
         
-        // Display pledges from localStorage
-        function displayPledges() {
-            // Clear current list
-            pledgesList.innerHTML = '';
-            
-            // Get pledges from localStorage
-            const pledges = JSON.parse(localStorage.getItem('pledges')) || [];
-            
-            // Sort pledges by timestamp (newest first)
-            pledges.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            
-            // Display only the 5 most recent pledges
-            const recentPledges = pledges.slice(0, 5);
-            
-            // Create HTML for each pledge
-            recentPledges.forEach(pledge => {
-                const li = document.createElement('li');
-                li.className = 'pledge-item';
-                
-                const date = new Date(pledge.timestamp);
-                const formattedDate = date.toLocaleDateString();
-                
-                li.innerHTML = `
-                    <div class="pledge-meta">${pledge.name} from ${pledge.city} - ${formattedDate}</div>
-                `;
-                
-                pledgesList.appendChild(li);
-            });
-        }
+        // Display pledges function removed
         
-        // Display pledges on page load
-        document.addEventListener('DOMContentLoaded', displayPledges);
+
     </script>
     
     <!-- Footer -->
@@ -555,6 +550,10 @@
             width: 100%;
             height: 100%;
             overflow: auto;
+            /* Improve momentum scrolling */
+            -webkit-overflow-scrolling: touch;
+            /* Prevent pull-to-refresh */
+            overscroll-behavior-y: none;
         }
         
         .webview-active .modal {
@@ -562,6 +561,10 @@
             transform: translateZ(0);
             backface-visibility: hidden;
             perspective: 1000px;
+            /* Improve scrolling in modal */
+            -webkit-overflow-scrolling: touch;
+            /* Prevent bounce effect */
+            overscroll-behavior: contain;
         }
         
         .webview-active input, .webview-active textarea {
@@ -569,6 +572,12 @@
             -webkit-appearance: none;
             appearance: none;
             border-radius: 0;
+            /* Fix iOS input styling */
+            border: 1px solid #ddd;
+            /* Prevent auto-zoom */
+            font-size: 16px;
+            /* Improve touch feedback */
+            touch-action: manipulation;
         }
         
         /* Improve touch targets for better usability */
@@ -576,6 +585,8 @@
             min-height: 44px; /* Apple's recommended minimum touch target size */
             min-width: 44px;
             touch-action: manipulation;
+            /* Add padding for better touch area */
+            padding: 0.8rem 1.5rem;
         }
         
         /* Prevent text selection on interactive elements */
@@ -588,18 +599,48 @@
         .modal {
             -webkit-overflow-scrolling: touch;
             scroll-behavior: smooth;
+            /* Prevent content shift when keyboard appears */
+            padding-bottom: 60px;
         }
         
         /* Optimize animations for webview */
         .webview-active .hero h1 {
             animation: none; /* Disable animations for better performance */
+            /* Use hardware acceleration */
+            transform: translateZ(0);
         }
         
-        /* Fix for iOS form input zoom */
+        /* Fix for iOS form input zoom and keyboard issues */
         @media screen and (max-width: 768px) {
             .webview-active input, .webview-active textarea, .webview-active select {
                 font-size: 16px; /* Prevent iOS zoom on focus */
+                /* Improve touch feedback */
+                touch-action: manipulation;
+                /* Fix iOS shadow rendering */
+                -webkit-appearance: none;
+                appearance: none;
             }
+            
+            /* Fix iOS keyboard issues */
+            .webview-active .modal-overlay.active {
+                /* Prevent content shift when keyboard appears */
+                position: absolute;
+                height: 100%;
+            }
+        }
+        
+        /* Fix for Android webview specific issues */
+        .webview-active.android {
+            /* Fix Android keyboard issues */
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        /* Fix for iOS webview specific issues */
+        .webview-active.ios {
+            /* Fix iOS safe area issues */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
         }
     </style>
     
@@ -611,37 +652,115 @@
                 console.log('WebView detected - applying optimizations');
                 document.body.classList.add('webview-active');
                 
-                // Disable zoom gestures
+                // Detect platform for specific optimizations
+                const ua = navigator.userAgent.toLowerCase();
+                const isIOS = /iphone|ipad|ipod/.test(ua);
+                const isAndroid = /android/.test(ua);
+                
+                // Add platform-specific classes
+                if (isIOS) document.body.classList.add('ios');
+                if (isAndroid) document.body.classList.add('android');
+                
+                // Disable zoom gestures (especially for iOS)
                 document.addEventListener('gesturestart', function(e) {
                     e.preventDefault();
-                });
+                }, { passive: false });
+                
+                document.addEventListener('gesturechange', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
+                
+                document.addEventListener('gestureend', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
                 
                 // Fix for iOS form focus issues
                 const inputs = document.querySelectorAll('input, textarea');
                 inputs.forEach(input => {
+                    // Prevent zoom on focus for iOS
+                    if (isIOS) {
+                        input.style.fontSize = '16px';
+                    }
+                    
+                    // Improve focus behavior
                     input.addEventListener('focus', function() {
                         // Add a small delay to ensure proper scrolling to the input
                         setTimeout(() => {
                             // Scroll the input into view
                             input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            
+                            // For iOS, add extra padding to prevent input from being hidden by keyboard
+                            if (isIOS) {
+                                document.querySelector('.modal').style.paddingBottom = '150px';
+                            }
                         }, 300);
+                    });
+                    
+                    // Reset padding when focus is lost
+                    if (isIOS) {
+                        input.addEventListener('blur', function() {
+                            setTimeout(() => {
+                                document.querySelector('.modal').style.paddingBottom = '60px';
+                            }, 300);
+                        });
+                    }
+                });
+                
+                // Improve touch response for buttons
+                const buttons = document.querySelectorAll('.btn, .close-modal');
+                buttons.forEach(button => {
+                    // Add active state for better touch feedback
+                    button.addEventListener('touchstart', function() {
+                        this.style.opacity = '0.7';
+                    });
+                    
+                    button.addEventListener('touchend', function() {
+                        this.style.opacity = '1';
+                        setTimeout(() => this.style.opacity = '1', 200);
                     });
                 });
                 
                 // Detect and handle back button in Android WebView
                 if (window.history && window.history.pushState) {
+                    // Add a dummy state to handle back button
+                    window.history.pushState({ page: 1 }, '', '');
+                    
                     window.addEventListener('popstate', function(e) {
                         // If modal is open, close it instead of navigating back
                         if (modalOverlay.classList.contains('active')) {
                             e.preventDefault();
                             modalOverlay.classList.remove('active');
                             successMessage.style.display = 'none';
+                            
+                            // Push another state to maintain history
+                            window.history.pushState({ page: 1 }, '', '');
                             return false;
                         }
                     });
-                    
-                    // Add a dummy state to handle back button
-                    window.history.pushState({ page: 1 }, '', '');
+                }
+                
+                // Fix for iOS overscroll/bounce effect
+                if (isIOS) {
+                    document.body.style.position = 'fixed';
+                    document.body.style.width = '100%';
+                    document.body.style.height = '100%';
+                    document.body.style.overflow = 'auto';
+                    document.body.style.webkitOverflowScrolling = 'touch';
+                }
+                
+                // Fix for Android keyboard issues
+                if (isAndroid) {
+                    // Monitor viewport height changes (keyboard appearance)
+                    const viewportHeight = window.innerHeight;
+                    window.addEventListener('resize', function() {
+                        if (window.innerHeight < viewportHeight) {
+                            // Keyboard is visible
+                            document.querySelector('.modal').style.paddingBottom = '150px';
+                        } else {
+                            // Keyboard is hidden
+                            document.querySelector('.modal').style.paddingBottom = '60px';
+                        }
+                    });
                 }
             }
         });
