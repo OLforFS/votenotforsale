@@ -21,12 +21,21 @@
         /* Mobile devices */
         @media screen and (max-width: 480px) {
             .hero h1 {
-                font-size: 1.4rem;
-                padding: 10px 15px;
+                font-size: 0.91rem; /* Reduced by 30% from 1.3rem */
+                padding: 8px 12px;
+                margin-bottom: 0.8rem;
+                border-width: 2px;
             }
             
             .hero p {
-                font-size: 1rem;
+                font-size: 0.95rem;
+                line-height: 1.4;
+                margin-bottom: 1.5rem;
+                padding: 0 10px;
+                display: block;
+                width: 100%;
+                overflow-wrap: break-word;
+                word-wrap: break-word;
             }
             
             .modal {
@@ -59,7 +68,8 @@
         /* Tablets */
         @media screen and (min-width: 481px) and (max-width: 768px) {
             .hero h1 {
-                font-size: 1.96rem;
+                font-size: 1.26rem; /* Reduced by 30% from 1.8rem */
+                padding: 12px 20px;
             }
             
             .hero p {
@@ -92,26 +102,28 @@
         
         /* Hero section */
         .hero {
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
-            padding: 2rem;
+            padding: 2rem 1rem;
             background: linear-gradient(135deg, #3498db, #2c3e50);
             color: white;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
         }
         
         .hero h1 {
-            font-size: 2.45rem;
+            font-size: 1.54rem; /* Reduced by 30% from 2.2rem */
             margin-bottom: 1.5rem;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 2px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
             animation: pulse 2s infinite;
-            padding: 15px 30px;
+            padding: 15px 25px;
             border: 3px solid rgba(255,255,255,0.7);
             border-radius: 10px;
             box-shadow: 0 0 15px rgba(255,255,255,0.5);
@@ -128,6 +140,75 @@
             font-size: 1.2rem;
             max-width: 800px;
             margin-bottom: 2rem;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            hyphens: auto;
+            padding: 0 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        /* Pledge Counter Styles */
+        .pledge-counter {
+            margin: 0.5rem 0 1.5rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .counter-container {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 0.8rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: counterPulse 2s infinite alternate;
+        }
+        
+        .counter-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        }
+        
+        .counter-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 0.2rem;
+        }
+        
+        .counter-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        @keyframes counterPulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+        
+        /* Responsive counter styles */
+        @media screen and (max-width: 480px) {
+            .counter-container {
+                padding: 0.6rem 1.2rem;
+            }
+            
+            .counter-number {
+                font-size: 1.8rem;
+            }
+            
+            .counter-label {
+                font-size: 0.7rem;
+            }
         }
         
         /* Button styles */
@@ -351,6 +432,12 @@
     <!-- Hero Section -->
     <section class="hero">
         <h1>MY VOTE IS NOT FOR SALE</h1>
+        <div class="pledge-counter">
+            <div class="counter-container">
+                <span class="counter-number" id="pledge-count">0</span>
+                <span class="counter-label">Pledges Submitted</span>
+            </div>
+        </div>
         <p>A commitment to electoral integrity. Protect Democracy by Taking a Stand. Your vote is your voice in our democracy. By taking this pledge, you're committing to protecting the integrity of our electoral process and standing against corruption.</p>
         <div class="button-container">
             <button class="btn" id="pledge-btn">TAKE THE PLEDGE</button>
@@ -688,7 +775,10 @@
         }
         
         // Initialize dropdown when DOM is loaded
-        document.addEventListener('DOMContentLoaded', populateCityDropdown);
+        document.addEventListener('DOMContentLoaded', () => {
+            populateCityDropdown();
+            updatePledgeCounter();
+        });
         
         // Enhanced Webview detection with improved platform coverage
         const isInWebView = () => {
@@ -822,10 +912,46 @@
             
             // Save back to localStorage
             localStorage.setItem('pledges', JSON.stringify(pledges));
+            
+            // Update pledge counter
+            updatePledgeCounter();
         }
         
         // Display pledges function removed
         
+        // Update pledge counter function
+        function updatePledgeCounter() {
+            const pledgeCountElement = document.getElementById('pledge-count');
+            const pledges = JSON.parse(localStorage.getItem('pledges')) || [];
+            const count = pledges.length;
+            
+            // Animate counter
+            const duration = 1000; // 1 second animation
+            const startValue = parseInt(pledgeCountElement.textContent) || 0;
+            const endValue = count;
+            const startTime = performance.now();
+            
+            // Only animate if there's a difference
+            if (startValue !== endValue) {
+                function animateCounter(currentTime) {
+                    const elapsedTime = currentTime - startTime;
+                    const progress = Math.min(elapsedTime / duration, 1);
+                    const currentValue = Math.floor(startValue + (endValue - startValue) * progress);
+                    
+                    pledgeCountElement.textContent = currentValue;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animateCounter);
+                    } else {
+                        pledgeCountElement.textContent = endValue;
+                    }
+                }
+                
+                requestAnimationFrame(animateCounter);
+            } else {
+                pledgeCountElement.textContent = count;
+            }
+        }
 
     </script>
     
