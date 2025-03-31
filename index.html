@@ -6,15 +6,42 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
-    <title>Vote Not For Sale - Electoral Integrity Pledge</title>
+    <title>Vote Not For Sale - Electoral Integrity Pledge Philippines</title>
+    <meta name="description" content="Take the pledge to protect electoral integrity in the Philippines. Your vote is not for sale!">
+    <meta property="og:title" content="Vote Not For Sale - Electoral Integrity Pledge Philippines">
+    <meta property="og:description" content="I've taken the pledge to protect the integrity of our elections. Join me in keeping our democracy strong! #HindiIpinagbibiliAngAkingBoto">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://votenotforsale.ph">
+    <meta property="og:image" content="https://votenotforsale.ph/share-image.jpg">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="stylesheet" href="share-modal.css">
+    <link rel="stylesheet" href="language-switcher.css">
+    <!-- Include Philippine icons -->
+    <script src="ph-icons.svg" defer></script>
+    <!-- Include Social icons -->
+    <script src="social-icons.svg" defer></script>
+    <!-- Include Filipino cultural icons -->
+    <script src="filipino-icons.svg" defer></script>
+    <!-- Google Fonts for better typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Favicon with Philippine colors -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%230038A8' d='M2,6h20v12H2V6z'/%3E%3Cpath fill='%23CE1126' d='M2,6h20v6H2V6z'/%3E%3Cpath fill='%23FFFFFF' d='M2,6l10,6l-10,6V6z'/%3E%3Cpath fill='%23FCD116' d='M7.5,12l-1.3,0.4l0.5-1.2l-1.2-0.5l1.3-0.4l-0.5-1.2l1,0.8l0.2-1.3l0.7,1.1l0.7-1.1l0.2,1.3l1-0.8l-0.5,1.2l1.3,0.4l-1.2,0.5l0.5,1.2L8.9,12l-0.2,1.3l-0.7-1.1l-0.7,1.1L7.1,12H7.5z'/%3E%3C/svg%3E" type="image/svg+xml">
+    <!-- Add Open Graph locale alternate for Filipino language -->
+    <meta property="og:locale" content="en_US">
+    <meta property="og:locale:alternate" content="tl_PH">
     <style>
         /* Reset and base styles */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Arial', sans-serif;
+            font-family: 'Open Sans', 'Arial', sans-serif;
+        }
+        
+        h1, h2, h3, .logo, .btn, .counter-label, .modal-title {
+            font-family: 'Montserrat', 'Arial', sans-serif;
         }
         
         /* Responsive breakpoints */
@@ -22,7 +49,7 @@
         @media screen and (max-width: 480px) {
             .hero h1 {
                 font-size: 0.91rem; /* Reduced by 30% from 1.3rem */
-                padding: 8px 12px;
+                padding: 5px 8px; /* Further reduced padding for mobile */
                 margin-bottom: 0.8rem;
                 border-width: 2px;
             }
@@ -69,7 +96,7 @@
         @media screen and (min-width: 481px) and (max-width: 768px) {
             .hero h1 {
                 font-size: 1.26rem; /* Reduced by 30% from 1.8rem */
-                padding: 12px 20px;
+                padding: 6px 12px; /* Reduced padding for tablets */
             }
             
             .hero p {
@@ -100,7 +127,7 @@
             color: #2c3e50;
         }
         
-        /* Hero section */
+        /* Hero section - with enhanced Philippine flag colors and cultural elements */
         .hero {
             min-height: 100vh;
             display: flex;
@@ -109,25 +136,110 @@
             align-items: center;
             text-align: center;
             padding: 2rem 1rem;
-            background: linear-gradient(135deg, #3498db, #2c3e50);
+            background: linear-gradient(135deg, #0038A8, #CE1126); /* Philippine flag blue and red */
             color: white;
             overflow-wrap: break-word;
             word-wrap: break-word;
+            position: relative;
+            /* Add texture for more depth */
+            background-attachment: fixed;
+        }
+        
+        /* Philippine flag subtle background with enhanced elements */
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='120' height='120' opacity='0.05'%3E%3Cpath fill='%23FCD116' d='M7.5,12l-1.3,0.4l0.5-1.2l-1.2-0.5l1.3-0.4l-0.5-1.2l1,0.8l0.2-1.3l0.7,1.1l0.7-1.1l0.2,1.3l1-0.8l-0.5,1.2l1.3,0.4l-1.2,0.5l0.5,1.2L8.9,12l-0.2,1.3l-0.7-1.1l-0.7,1.1L7.1,12H7.5z'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            opacity: 0.15;
+            z-index: 0;
+            animation: subtleFloat 60s infinite linear;
+        }
+        
+        /* Add a second decorative layer with Filipino cultural elements - Sampaguita (national flower) pattern */
+        .hero::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='180' height='180' opacity='0.03'%3E%3Ccircle cx='12' cy='12' r='3' fill='%23FFFFFF' stroke='%23006400' stroke-width='0.5'/%3E%3Cpath fill='%23FFFFFF' stroke='%23006400' stroke-width='0.5' d='M12,5 C13.5,7 16,7 18,6 C17,8 17,10.5 19,12 C17,13.5 17,16 18,18 C16,17 13.5,17 12,19 C10.5,17 8,17 6,18 C7,16 7,13.5 5,12 C7,10.5 7,8 6,6 C8,7 10.5,7 12,5 Z'/%3E%3Ccircle cx='12' cy='12' r='1.5' fill='%23FCD116'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            opacity: 0.05;
+            z-index: 0;
+            animation: subtleFloat 80s infinite linear reverse;
+        }
+        
+        /* Add a third decorative layer with Anahaw (national leaf) pattern */
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='240' height='240' opacity='0.02'%3E%3Cpath fill='%23006400' d='M12,3 C8,3 4,7 4,12 C4,17 8,21 12,21 C16,21 20,17 20,12 C20,7 16,3 12,3 Z'/%3E%3Cpath fill='%23008000' d='M12,5 C9,5 6,8 6,12 C6,16 9,19 12,19 C15,19 18,16 18,12 C18,8 15,5 12,5 Z'/%3E%3Cpath fill='none' stroke='%23FFFFFF' stroke-width='0.2' d='M12,5 L12,19 M6,12 L18,12 M8,8 L16,16 M16,8 L8,16 M7,10 L17,14 M17,10 L7,14'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            opacity: 0.03;
+            z-index: 0;
+            animation: subtleFloat 100s infinite linear;
+        }
+        
+        @keyframes subtleFloat {
+            0% { background-position: 0 0; }
+            100% { background-position: 100% 100%; }
         }
         
         .hero h1 {
-            font-size: 1.54rem; /* Reduced by 30% from 2.2rem */
+            font-size: 1.4rem; /* Reduced by 30% from 2rem */
             margin-bottom: 1.5rem;
             font-weight: 900;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            letter-spacing: 3px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.4), 0 0 20px rgba(252, 209, 22, 0.4);
             animation: pulse 2s infinite;
-            padding: 15px 25px;
-            border: 3px solid rgba(255,255,255,0.7);
+            padding: 8px 15px; /* Reduced padding to make text closer to border */
+            border: 4px solid rgba(255,255,255,0.8);
             border-radius: 10px;
-            box-shadow: 0 0 15px rgba(255,255,255,0.5);
-            background-color: rgba(0,0,0,0.2);
+            box-shadow: 0 0 20px rgba(255,255,255,0.6), 0 0 40px rgba(0,0,0,0.2);
+            background-color: rgba(0,0,0,0.25);
+            position: relative;
+            z-index: 1;
+            /* Add Filipino-inspired border pattern */
+            border-image: linear-gradient(45deg, #FCD116, rgba(255,255,255,0.8), #FCD116) 1;
+            border-image-slice: 1;
+        }
+        
+        /* Tagalog translation subtitle - Enhanced for language switching */
+        .hero h1::after {
+            content: attr(data-subtitle);
+            display: block;
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-top: 12px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.3), 0 0 10px rgba(252, 209, 22, 0.5);
+            color: #FCD116; /* Philippine flag yellow */
+            position: relative;
+            padding-bottom: 8px;
+        }
+        
+        /* Add decorative element to Tagalog subtitle */
+        .hero h1::after::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 2px;
+            background-color: #FCD116;
+            border-radius: 2px;
         }
         
         @keyframes pulse {
@@ -139,61 +251,150 @@
         .hero p {
             font-size: 1.2rem;
             max-width: 800px;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
             overflow-wrap: break-word;
             word-wrap: break-word;
             hyphens: auto;
             padding: 0 10px;
             width: 100%;
             box-sizing: border-box;
+            position: relative;
+            z-index: 1;
         }
         
-        /* Pledge Counter Styles */
+        /* Tagalog text styling */
+        .tagalog-text {
+            font-size: 1rem;
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.9);
+            max-width: 800px;
+            margin-bottom: 2rem;
+            border-left: 3px solid #FCD116; /* Philippine flag yellow */
+            padding-left: 15px;
+        }
+        
+        /* Pledge Counter Styles - Enhanced with Philippine elements */
         .pledge-counter {
             margin: 0.5rem 0 1.5rem;
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
+            z-index: 1;
         }
         
         .counter-container {
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.25);
             border-radius: 12px;
-            padding: 0.8rem 1.5rem;
+            padding: 0.6rem 1.8rem; /* Reduced padding by 40% from 1rem */
             display: flex;
             flex-direction: column;
             align-items: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), 0 0 30px rgba(252, 209, 22, 0.5); /* Enhanced yellow glow */
             backdrop-filter: blur(5px);
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 3px solid rgba(255, 255, 255, 0.5);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
-            animation: counterPulse 2s infinite alternate;
+            animation: counterPulse 2.5s infinite alternate;
+            position: relative;
+        }
+        
+        /* Enhanced Philippine flag icon with improved colors and design */
+        .counter-container::before {
+            content: '';
+            position: absolute;
+            left: -45px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 35px;
+            height: 35px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%230038A8' d='M2,6h20v12H2V6z'/%3E%3Cpath fill='%23CE1126' d='M2,6h20v6H2V6z'/%3E%3Cpath fill='%23FFFFFF' d='M2,6l10,6l-10,6V6z'/%3E%3Cpath fill='%23FCD116' d='M7.5,12l-1.3,0.4l0.5-1.2l-1.2-0.5l1.3-0.4l-0.5-1.2l1,0.8l0.2-1.3l0.7,1.1l0.7-1.1l0.2,1.3l1-0.8l-0.5,1.2l1.3,0.4l-1.2,0.5l0.5,1.2L8.9,12l-0.2,1.3l-0.7-1.1l-0.7,1.1L7.1,12H7.5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: contain;
+            filter: drop-shadow(0 0 10px rgba(252, 209, 22, 0.9));
+            animation: flagWave 4s ease-in-out infinite;
+            z-index: 2;
+        }
+        
+        /* Removed the Sampaguita flower icon from the right side */
+        
+        @keyframes flagWave {
+            0% { transform: translateY(-50%) scale(1) rotate(-5deg); filter: drop-shadow(0 0 5px rgba(252, 209, 22, 0.7)); }
+            25% { transform: translateY(-50%) scale(1.05) rotate(0deg); filter: drop-shadow(0 0 8px rgba(252, 209, 22, 0.8)); }
+            50% { transform: translateY(-50%) scale(1.1) rotate(5deg); filter: drop-shadow(0 0 12px rgba(252, 209, 22, 0.9)); }
+            75% { transform: translateY(-50%) scale(1.05) rotate(0deg); filter: drop-shadow(0 0 8px rgba(252, 209, 22, 0.8)); }
+            100% { transform: translateY(-50%) scale(1) rotate(-5deg); filter: drop-shadow(0 0 5px rgba(252, 209, 22, 0.7)); }
         }
         
         .counter-container:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 50px rgba(252, 209, 22, 0.8), 0 0 25px rgba(206, 17, 38, 0.6); /* Enhanced multi-color glow on hover */
+            border-color: rgba(255, 255, 255, 0.9);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .counter-container:hover .counter-number {
+            background: linear-gradient(to bottom, #ffffff 10%, #FCD116 60%, #CE1126 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: numberGlow 1.5s infinite alternate;
         }
         
         .counter-number {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 800;
             color: #ffffff;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            margin-bottom: 0.2rem;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.7); /* Enhanced glow */
+            margin-bottom: 0.3rem;
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(to bottom, #ffffff 20%, #FCD116 70%, #CE1126 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            display: inline-block;
+            letter-spacing: 1px;
+            animation: numberGlow 3s infinite alternate;
         }
         
         .counter-label {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 1);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 2px;
+            position: relative;
+            padding: 5px 12px;
+            border-radius: 6px;
+            background-color: rgba(0, 56, 168, 0.5); /* Philippine flag blue with transparency */
+            border-bottom: 3px solid rgba(252, 209, 22, 0.9); /* Philippine flag yellow */
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Responsive counter styles for mobile */
+        @media screen and (max-width: 480px) {
+            .counter-container::before {
+                left: -35px;
+                width: 28px;
+                height: 28px;
+            }
+            
+            .counter-container {
+                padding: 0.7rem 1.3rem;
+                margin-left: 15px; /* Add some space on the left to accommodate the flag */
+            }
         }
         
         @keyframes counterPulse {
-            0% { transform: scale(1); }
-            100% { transform: scale(1.05); }
+            0% { transform: scale(1); box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 40px rgba(252, 209, 22, 0.6), 0 0 15px rgba(206, 17, 38, 0.4); }
+            50% { transform: scale(1.03); box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4), 0 0 50px rgba(252, 209, 22, 0.7), 0 0 20px rgba(206, 17, 38, 0.5); }
+            100% { transform: scale(1.06); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4), 0 0 40px rgba(252, 209, 22, 0.6), 0 0 15px rgba(206, 17, 38, 0.4); }
+        }
+        
+        @keyframes numberGlow {
+            0% { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.7); }
+            50% { text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 30px rgba(252, 209, 22, 0.8); }
+            100% { text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 25px rgba(255, 255, 255, 0.7); }
         }
         
         /* Responsive counter styles */
@@ -211,50 +412,241 @@
             }
         }
         
-        /* Button styles */
+        /* Button styles - Enhanced with Filipino elements */
         .button-container {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
+            position: relative;
+            z-index: 1;
         }
         
         .btn {
-            display: inline-block;
-            padding: 0.8rem 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.9rem 1.8rem;
             background-color: #e74c3c;
             color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 15px rgba(231, 76, 60, 0.4);
+            position: relative;
+            overflow: hidden;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            letter-spacing: 1px;
+            /* Add Filipino-inspired design elements */
+            border-image: linear-gradient(to right, #FCD116, rgba(255,255,255,0.3), #FCD116) 1;
+            border-image-slice: 1;
         }
         
+        /* Handshake icon */
+        .btn::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='white' d='M21.3,10.8l-3-3c-0.4-0.4-1-0.4-1.4,0l-0.9,0.9l-5.6-5.6c-0.4-0.4-1-0.4-1.4,0l-3,3c-0.4,0.4-0.4,1,0,1.4l0.9,0.9l-3.6,3.6c-0.4,0.4-0.4,1,0,1.4l6,6c0.2,0.2,0.5,0.3,0.7,0.3s0.5-0.1,0.7-0.3l3.6-3.6l0.9,0.9c0.2,0.2,0.5,0.3,0.7,0.3s0.5-0.1,0.7-0.3l6-6C21.7,11.8,21.7,11.2,21.3,10.8z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: contain;
+        }
+        
+        /* Button hover effect */
         .btn:hover {
             background-color: #c0392b;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4), 0 0 20px rgba(231, 76, 60, 0.5);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Button light effect on hover */
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .btn:hover::after {
+            opacity: 1;
         }
         
         .share-btn {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: none;
-            border: 2px solid rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.8);
             cursor: pointer;
-            padding: 8px 12px;
-            border-radius: 4px;
+            padding: 10px 14px;
+            border-radius: 50%;
             transition: all 0.3s ease;
-            margin-left: 5px;
+            margin-left: 12px;
+            box-shadow: 0 0 10px rgba(252, 209, 22, 0.4);
+            position: relative;
+            overflow: hidden;
+            animation: shareButtonPulse 2s infinite alternate;
+        }
+        
+        /* Add Tagalog tooltip to share button */
+        .share-btn::before {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            opacity: 0;
+            transition: opacity 0.3s ease, bottom 0.3s ease;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        
+        @keyframes shareButtonPulse {
+            0% { transform: scale(1); box-shadow: 0 0 10px rgba(252, 209, 22, 0.4); }
+            100% { transform: scale(1.1); box-shadow: 0 0 15px rgba(252, 209, 22, 0.7); }
         }
         
         .share-btn:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-            transform: scale(1.05);
+            background-color: rgba(255, 255, 255, 0.3);
+            transform: scale(1.15);
+            box-shadow: 0 0 20px rgba(252, 209, 22, 0.8);
+        }
+        
+        .share-btn:hover::before {
+            opacity: 1;
+            bottom: -25px;
+        }
+        
+        .share-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 0 5px rgba(252, 209, 22, 0.3);
+        }
+        
+        .share-btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .share-btn:hover::after {
+            opacity: 1;
         }
         
         .share-icon {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
+            filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.3));
+        }
+        
+        /* Enhanced button hover effect with Philippine colors */
+        .btn:hover {
+            background: linear-gradient(135deg, #CE1126, #c0392b); /* Philippine flag red gradient */
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4), 0 0 20px rgba(231, 76, 60, 0.5), 0 0 30px rgba(252, 209, 22, 0.3); /* Added yellow glow */
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Filipino cultural decorative elements */
+        .cultural-decorations {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+        
+        .cultural-icon {
+            position: absolute;
+            opacity: 0.15;
+            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
+        }
+        
+        .cultural-icon.sampaguita {
+            top: 10%;
+            right: 5%;
+            width: 80px;
+            height: 80px;
+            animation: floatAnimation 15s infinite ease-in-out;
+        }
+        
+        .cultural-icon.anahaw {
+            bottom: 15%;
+            left: 8%;
+            width: 100px;
+            height: 100px;
+            animation: floatAnimation 18s infinite ease-in-out reverse;
+        }
+        
+        .cultural-icon.sarimanok {
+            top: 20%;
+            left: 7%;
+            width: 70px;
+            height: 70px;
+            animation: floatAnimation 12s infinite ease-in-out 2s;
+        }
+        
+        .cultural-icon.jeepney {
+            bottom: 10%;
+            right: 10%;
+            width: 60px;
+            height: 60px;
+            animation: floatAnimation 20s infinite ease-in-out 1s;
+        }
+        
+        .cultural-icon.mango {
+            top: 50%;
+            right: 15%;
+            width: 50px;
+            height: 50px;
+            animation: floatAnimation 10s infinite ease-in-out 3s;
+        }
+        
+        @keyframes floatAnimation {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-10px, 10px) rotate(5deg); }
+            50% { transform: translate(0, -15px) rotate(0deg); }
+            75% { transform: translate(10px, 5px) rotate(-5deg); }
+            100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        
+        /* Responsive styles for cultural icons */
+        @media screen and (max-width: 768px) {
+            .cultural-icon {
+                transform: scale(0.7);
+            }
+        }
+        
+        @media screen and (max-width: 480px) {
+            .cultural-icon {
+                transform: scale(0.5);
+            }
         }
         
         /* Modal styles */
@@ -384,6 +776,48 @@
             margin-bottom: 0;
         }
         
+        /* Share Tagalog text styling */
+        .share-tagalog {
+            margin: 10px 0 20px;
+            padding: 8px 12px;
+            background-color: rgba(0, 56, 168, 0.1); /* Philippine flag blue with transparency */
+            border-left: 3px solid #FCD116; /* Philippine flag yellow */
+            border-radius: 4px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+        
+        .share-description {
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            color: #333;
+        }
+        
+        .share-footer {
+            display: flex;
+            align-items: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        
+        .ph-flag-container {
+            width: 30px;
+            height: 30px;
+            margin-right: 10px;
+        }
+        
+        .ph-flag-icon {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .share-footer-text {
+            font-size: 0.85rem;
+            color: #555;
+            font-weight: 600;
+        }
+        
         /* Pledges list */
         .pledges-container {
             margin-top: 2rem;
@@ -424,6 +858,12 @@
     </style>
 </head>
 <body>
+    <!-- SVG Definitions -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+        <symbol id="share-icon" viewBox="0 0 24 24">
+            <path fill="white" d="M18,16.08c-0.76,0-1.44,0.3-1.96,0.77L8.91,12.7C8.96,12.47,9,12.24,9,12s-0.04-0.47-0.09-0.7l7.05-4.11 c0.54,0.5,1.25,0.81,2.04,0.81c1.66,0,3-1.34,3-3s-1.34-3-3-3s-3,1.34-3,3c0,0.24,0.04,0.47,0.09,0.7L8.04,9.81 C7.5,9.31,6.79,9,6,9c-1.66,0-3,1.34-3,3s1.34,3,3,3c0.79,0,1.5-0.31,2.04-0.81l7.12,4.16c-0.05,0.21-0.08,0.43-0.08,0.65 c0,1.61,1.31,2.92,2.92,2.92s2.92-1.31,2.92-2.92C21,17.39,19.61,16.08,18,16.08z"/>
+        </symbol>
+    </svg>
     <!-- Header -->
     <header>
         <div class="logo">Vote Not For Sale</div>
@@ -438,11 +878,14 @@
                 <span class="counter-label">Pledges Submitted</span>
             </div>
         </div>
-        <p>A commitment to electoral integrity. Protect Democracy by Taking a Stand. Your vote is your voice in our democracy. By taking this pledge, you're committing to protecting the integrity of our electoral process and standing against corruption.</p>
+        <p class="tagalog-text">Isang pangako sa integridad ng halalan sa Pilipinas. Pangalagaan ang Demokrasya sa pamamagitan ng pagtindig. Ang iyong boto ay ang iyong boses sa ating demokrasya. Sa pamamagitan ng pangakong ito, ikaw ay nangangako na poprotektahan ang integridad ng ating proseso ng halalan at lalaban sa katiwalian.</p>
         <div class="button-container">
-            <button class="btn" id="pledge-btn">TAKE THE PLEDGE</button>
+            <button class="btn" id="pledge-btn">
+                <svg width="24" height="24" class="pledge-icon"><use xlink:href="#icon-handshake"></use></svg>
+                TAKE THE PLEDGE
+            </button>
             <button class="share-btn" id="share-btn" aria-label="Share">
-                <img src="share-icon.png" alt="Share" class="share-icon">
+                <svg width="24" height="24" class="share-icon"><use xlink:href="#icon-ph-flag"></use></svg>
             </button>
         </div>
     </section>
@@ -618,8 +1061,8 @@
         
         // Share data configuration
         const shareData = {
-            title: 'Vote Not For Sale - Electoral Integrity Pledge',
-            text: 'Join me in taking a stand for electoral integrity. My vote is not for sale!',
+            title: 'Vote Not For Sale - Electoral Integrity Pledge Philippines',
+            text: 'Join me in taking a stand for electoral integrity in the Philippines. My vote is not for sale! Hindi ipinagbibili ang aking boto! Sama-sama tayong magtindig para sa malinis na halalan. #VoteNotForSale #MalayangBoto #PilipinasNatin',
             url: window.location.href
         };
         
@@ -1246,6 +1689,42 @@
                         }
                     });
                 }
+            }
+        });
+    </script>
+    <!-- Include Share Modal -->
+    <div id="share-modal-container"></div>
+    
+    <!-- Scripts -->
+    <script src="share.js"></script>
+    <script>
+        // Load share modal HTML
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('share-modal.html')
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('share-modal-container').innerHTML = html;
+                });
+                
+            // Update counter animation
+            const counterNumber = document.querySelector('.counter-number');
+            if (counterNumber) {
+                const targetNumber = parseInt(counterNumber.textContent);
+                let currentNumber = 0;
+                const duration = 2000; // 2 seconds
+                const increment = targetNumber / (duration / 16);
+                
+                const updateCounter = () => {
+                    currentNumber += increment;
+                    if (currentNumber < targetNumber) {
+                        counterNumber.textContent = Math.floor(currentNumber);
+                        requestAnimationFrame(updateCounter);
+                    } else {
+                        counterNumber.textContent = targetNumber;
+                    }
+                };
+                
+                updateCounter();
             }
         });
     </script>

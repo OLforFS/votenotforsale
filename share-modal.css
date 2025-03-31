@@ -8,6 +8,8 @@
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     transform: translateY(-20px);
     transition: transform 0.3s ease;
+    border-top: 4px solid #0038A8; /* Philippine flag blue */
+    border-bottom: 4px solid #CE1126; /* Philippine flag red */
 }
 
 .share-modal-overlay {
@@ -46,6 +48,21 @@
     font-size: 1.3rem;
     color: #2c3e50;
     margin: 0;
+    position: relative;
+    padding-left: 28px;
+}
+
+.share-modal-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%230038A8' d='M2,6h20v12H2V6z'/%3E%3Cpath fill='%23CE1126' d='M2,6h20v6H2V6z'/%3E%3Cpath fill='%23FFFFFF' d='M2,6l10,6l-10,6V6z'/%3E%3Cpath fill='%23FCD116' d='M7.5,12l-1.3,0.4l0.5-1.2l-1.2-0.5l1.3-0.4l-0.5-1.2l1,0.8l0.2-1.3l0.7,1.1l0.7-1.1l0.2,1.3l1-0.8l-0.5,1.2l1.3,0.4l-1.2,0.5l0.5,1.2L8.9,12l-0.2,1.3l-0.7-1.1l-0.7,1.1L7.1,12H7.5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: contain;
 }
 
 .close-share-modal {
@@ -61,6 +78,19 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
     margin-bottom: 20px;
+    position: relative;
+}
+
+.share-options::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(to right, #0038A8, #CE1126); /* Philippine flag colors */
+    border-radius: 3px;
+    opacity: 0.5;
 }
 
 .share-option {
@@ -68,96 +98,209 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    position: relative;
     padding: 10px;
     border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
     text-decoration: none;
-    color: #333;
+    color: #2c3e50;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    background-color: rgba(0,0,0,0.05);
+    border: 1px solid transparent;
+}
+
+/* Enhanced hover effects with message preview */
+.share-option::before {
+    content: attr(data-message);
+    position: absolute;
+    bottom: -70px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 10;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    border-left: 3px solid #FCD116; /* Philippine flag yellow */
+}
+
+/* Show message preview on hover */
+.share-option:hover::before {
+    opacity: 1;
+    visibility: visible;
+    bottom: -80px;
+}
+
+/* Add a small arrow to the tooltip */
+.share-option::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid rgba(0, 0, 0, 0.8);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.share-option:hover::after {
+    opacity: 1;
+    visibility: visible;
+    bottom: -15px;
 }
 
 .share-option:hover {
-    background-color: #f5f5f5;
+    background-color: rgba(0,0,0,0.1);
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    border-color: rgba(252, 209, 22, 0.5); /* Philippine flag yellow */
 }
 
 .share-icon-container {
     width: 40px;
     height: 40px;
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 50%;
     margin-bottom: 8px;
+    transition: all 0.3s ease;
+}
+
+.share-icon {
+    width: 24px;
+    height: 24px;
+    fill: white;
 }
 
 .share-option-label {
     font-size: 0.8rem;
-    text-align: center;
+    font-weight: 600;
 }
 
-/* Social media colors */
-.facebook {
-    background-color: #3b5998;
-    color: white;
+/* Social media brand colors */
+.facebook .share-icon-container {
+    background-color: #1877f2;
 }
 
-.messenger {
+.messenger .share-icon-container {
     background-color: #0084ff;
-    color: white;
 }
 
-.whatsapp {
-    background-color: #25D366;
-    color: white;
+.twitter .share-icon-container {
+    background-color: #1da1f2;
 }
 
-.twitter {
-    background-color: #1DA1F2;
-    color: white;
+.whatsapp .share-icon-container {
+    background-color: #25d366;
 }
 
-.email {
-    background-color: #D44638;
-    color: white;
-}
-
-.copy {
-    background-color: #6c757d;
-    color: white;
-}
-
-.linkedin {
-    background-color: #0077b5;
-    color: white;
-}
-
-.telegram {
+.telegram .share-icon-container {
     background-color: #0088cc;
-    color: white;
 }
 
-/* Responsive adjustments */
+.email .share-icon-container {
+    background-color: #ea4335;
+}
+
+.copy .share-icon-container {
+    background-color: #6c5ce7;
+}
+
+/* Enhanced hover effects for social icons */
+.share-option:hover .share-icon-container {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(252, 209, 22, 0.5); /* Philippine flag yellow glow */
+}
+
+/* Share description styles */
+.share-description {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Tagalog translation styles */
+.share-tagalog {
+    margin-bottom: 1.5rem;
+    padding: 10px;
+    background-color: rgba(0, 56, 168, 0.05); /* Philippine flag blue with transparency */
+    border-radius: 6px;
+    border-left: 3px solid #CE1126; /* Philippine flag red */
+}
+
+.share-tagalog em {
+    color: #7f8c8d;
+    font-size: 0.9rem;
+}
+
+/* Share footer styles */
+.share-footer {
+    display: flex;
+    align-items: center;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #ecf0f1;
+}
+
+.ph-flag-container {
+    width: 30px;
+    height: 30px;
+    margin-right: 10px;
+    animation: gentle-wave 3s infinite alternate;
+}
+
+@keyframes gentle-wave {
+    0% { transform: rotate(-5deg); }
+    100% { transform: rotate(5deg); }
+}
+
+.ph-flag-icon {
+    width: 100%;
+    height: 100%;
+}
+
+.share-footer-text {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Responsive styles */
 @media screen and (max-width: 480px) {
-    .share-options {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 10px;
-    }
-    
-    .share-icon-container {
-        width: 35px;
-        height: 35px;
-    }
-    
-    .share-option-label {
-        font-size: 0.7rem;
-    }
-    
     .share-modal {
         padding: 1.2rem;
+        width: 95%;
+    }
+    
+    .share-options {
+        grid-template-columns: repeat(2, 1fr);
     }
     
     .share-modal-title {
         font-size: 1.1rem;
+    }
+    
+    .share-option::before {
+        width: 150px;
+        font-size: 0.7rem;
+        bottom: -60px;
+    }
+    
+    .share-option:hover::before {
+        bottom: -65px;
     }
 }
 
