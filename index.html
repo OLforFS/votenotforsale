@@ -363,6 +363,120 @@
             font-size: 1rem;
         }
         
+        /* Custom searchable dropdown styles */
+        .search-dropdown-container {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+        
+        #city-search {
+            width: 100%;
+            padding-left: 2rem;
+            padding-right: 2rem;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23999" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>');
+            background-repeat: no-repeat;
+            background-position: 0.5rem center;
+            background-size: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .dropdown-arrow {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #999;
+            pointer-events: none;
+            transition: transform 0.2s ease;
+        }
+        
+        .dropdown-arrow.active {
+            transform: translateY(-50%) rotate(180deg);
+        }
+        
+        .custom-dropdown {
+            position: relative;
+            width: 100%;
+        }
+        
+        .custom-dropdown-options {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 250px;
+            overflow-y: auto;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 0 0 4px 4px;
+            z-index: 10;
+            display: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            margin-top: 2px;
+        }
+        
+        /* Mobile optimizations for dropdown */
+        @media screen and (max-width: 480px) {
+            .custom-dropdown-options {
+                max-height: 200px;
+            }
+            
+            .custom-dropdown-option {
+                padding: 0.6rem;
+            }
+        }
+        
+        .custom-dropdown-options.active {
+            display: block;
+        }
+        
+        .custom-dropdown-option {
+            padding: 0.8rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .custom-dropdown-option:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .custom-dropdown-selected {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            background-color: white;
+            text-align: left;
+            position: relative;
+        }
+        
+        .custom-dropdown-selected::after {
+            content: '';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #999;
+        }
+        
+        .custom-dropdown-selected.active::after {
+            border-top: none;
+            border-bottom: 6px solid #999;
+        }
+        
+        .custom-dropdown select {
+            display: none;
+        }
+        
         @media screen and (max-width: 480px) {
             input, textarea, select {
                 padding: 0.6rem;
@@ -546,9 +660,16 @@
                 
                 <div class="form-group">
                     <label for="city">City or Municipality <span class="required">*</span></label>
-                    <select id="city" required>
-                        <option value="" disabled selected>Select your city or municipality</option>
-                    </select>
+                    <div class="custom-dropdown">
+                        <div class="search-dropdown-container">
+                            <input type="text" id="city-search" placeholder="Search for your city..." autocomplete="off">
+                            <div class="dropdown-arrow" id="dropdown-arrow"></div>
+                        </div>
+                        <div class="custom-dropdown-options" id="city-options"></div>
+                        <select id="city" required style="display: none;">
+                            <option value="" disabled selected>Select your city or municipality</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -844,13 +965,104 @@
             // Sort cities alphabetically
             philippineCities.sort();
             
-            // Add cities to dropdown
+            // Add cities to hidden dropdown (for form submission)
             philippineCities.forEach(city => {
                 const option = document.createElement('option');
                 option.value = city;
                 option.textContent = city;
                 cityDropdown.appendChild(option);
             });
+            
+            // Setup custom searchable dropdown
+            setupCustomDropdown();
+        }
+        
+        // Setup custom searchable dropdown functionality
+        function setupCustomDropdown() {
+            const citySearch = document.getElementById('city-search');
+            const cityOptions = document.getElementById('city-options');
+            const dropdownArrow = document.getElementById('dropdown-arrow');
+            
+            // Populate custom dropdown options
+            philippineCities.forEach(city => {
+                const optionElement = document.createElement('div');
+                optionElement.className = 'custom-dropdown-option';
+                optionElement.textContent = city;
+                optionElement.dataset.value = city;
+                
+                // Handle option selection
+                optionElement.addEventListener('click', function() {
+                    // Update the search input with selected city
+                    citySearch.value = this.textContent;
+                    
+                    // Update the hidden select for form submission
+                    cityDropdown.value = this.dataset.value;
+                    
+                    // Close the dropdown
+                    cityOptions.classList.remove('active');
+                    dropdownArrow.classList.remove('active');
+                    
+                    // Show all options again for next time
+                    showAllOptions();
+                });
+                
+                cityOptions.appendChild(optionElement);
+            });
+            
+            // Toggle dropdown on search input click
+            citySearch.addEventListener('click', function() {
+                cityOptions.classList.toggle('active');
+                dropdownArrow.classList.toggle('active');
+                citySearch.focus();
+            });
+            
+            // Toggle dropdown on arrow click
+            dropdownArrow.addEventListener('click', function() {
+                cityOptions.classList.toggle('active');
+                dropdownArrow.classList.toggle('active');
+                citySearch.focus();
+            });
+            
+            // Filter options based on search input
+            citySearch.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                const options = cityOptions.querySelectorAll('.custom-dropdown-option');
+                
+                // If search input is not empty, open the dropdown
+                if (!cityOptions.classList.contains('active')) {
+                    cityOptions.classList.add('active');
+                    dropdownArrow.classList.add('active');
+                }
+                
+                options.forEach(option => {
+                    const cityName = option.textContent.toLowerCase();
+                    const matches = cityName.includes(searchTerm);
+                    
+                    // Hide/show options based on search
+                    option.style.display = matches ? '' : 'none';
+                });
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.custom-dropdown')) {
+                    cityOptions.classList.remove('active');
+                    dropdownArrow.classList.remove('active');
+                }
+            });
+            
+            // Function to show all options
+            function showAllOptions() {
+                const options = cityOptions.querySelectorAll('.custom-dropdown-option');
+                options.forEach(option => {
+                    option.style.display = '';
+                });
+            }
+            
+            // Add placeholder text behavior
+            if (!citySearch.value) {
+                citySearch.placeholder = "Search for your city...";
+            }
         }
         
         // Initialize dropdown when DOM is loaded
@@ -962,6 +1174,12 @@
             const name = document.getElementById('name').value;
             const city = document.getElementById('city').value;
             const email = document.getElementById('email').value;
+            
+            // Validate city selection
+            if (!city) {
+                alert('Please select a city or municipality');
+                return;
+            }
             
             // Create pledge object
             const pledge = {
