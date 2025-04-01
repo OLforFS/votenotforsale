@@ -154,6 +154,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
         }
         
         .counter-container {
@@ -168,6 +169,21 @@
             border: 2px solid rgba(255, 255, 255, 0.3);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             animation: counterPulse 2s infinite alternate;
+        }
+        
+        .ph-flag {
+            position: absolute;
+            left: -150px;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 50%;
+            width: auto;
+            filter: drop-shadow(2px 2px 3px rgba(0, 0, 0, 0.3));
+            transition: transform 0.3s ease;
+        }
+        
+        .counter-container:hover + .ph-flag {
+            transform: translateY(-50%) scale(1.1);
         }
         
         .counter-container:hover {
@@ -208,6 +224,17 @@
             
             .counter-label {
                 font-size: 0.7rem;
+            }
+            
+            .ph-flag {
+                left: -120px;
+                right: auto;
+                height: 15px;
+                width: 30px;
+            }
+            
+            .pledge-counter {
+                margin-right: 20px;
             }
         }
         
@@ -437,6 +464,7 @@
                 <span class="counter-number" id="pledge-count">0</span>
                 <span class="counter-label">Pledges Submitted</span>
             </div>
+            <img src="ph-flag.svg" alt="Philippine Flag" class="ph-flag">
         </div>
         <p class="tagalog-text">Isang pangako sa integridad ng halalan. Ipagtanggol ang Demokrasya sa pamamagitan ng paninindigan. Ang iyong boto ay ang iyong boses sa ating demokrasya. Sa pamamagitan ng pangakong ito, ikaw ay nangangakong poprotektahan ang integridad ng ating proseso ng halalan at lalaban sa katiwalian.</p>
         <div class="button-container">
