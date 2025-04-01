@@ -383,14 +383,65 @@
             color: #e74c3c;
         }
         
-        /* Success message */
+        /* Success message popup */
         .success-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             background-color: #2ecc71;
             color: white;
-            padding: 1rem;
-            border-radius: 4px;
-            margin-bottom: 1.5rem;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 2000;
             display: none;
+            text-align: center;
+            max-width: 90%;
+            width: 400px;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        
+        .success-message.active {
+            opacity: 1;
+        }
+        
+        /* Countdown timer */
+        .countdown-timer {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .countdown-bar {
+            width: 100%;
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.3);
+            margin-top: 8px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .countdown-progress {
+            height: 100%;
+            width: 100%;
+            background-color: white;
+            transform-origin: left;
+            transition: transform 3s linear;
+        }
+        
+        .success-message .close-success {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+            line-height: 1;
         }
         
         .pledge-info {
@@ -923,11 +974,77 @@
             // Save to localStorage
             savePledge(pledge);
             
-            // Show success message
+            // Show success message popup with smooth transition
             successMessage.style.display = 'block';
+            
+            // Create countdown elements if they don't exist
+            if (!successMessage.querySelector('.countdown-timer')) {
+                const countdownTimer = document.createElement('div');
+                countdownTimer.className = 'countdown-timer';
+                countdownTimer.innerHTML = 'Redirecting in <span id="countdown-seconds">3</span> seconds...';
+                
+                const countdownBar = document.createElement('div');
+                countdownBar.className = 'countdown-bar';
+                
+                const countdownProgress = document.createElement('div');
+                countdownProgress.className = 'countdown-progress';
+                countdownBar.appendChild(countdownProgress);
+                
+                successMessage.appendChild(countdownTimer);
+                successMessage.appendChild(countdownBar);
+            }
+            
+            // Add close button to success message if not already added
+            if (!successMessage.querySelector('.close-success')) {
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'close-success';
+                closeBtn.innerHTML = '×';
+                closeBtn.onclick = function() {
+                    // Fade out and redirect
+                    successMessage.classList.remove('active');
+                    setTimeout(() => {
+                        successMessage.style.display = 'none';
+                        window.location.href = '/';
+                    }, 300);
+                };
+                successMessage.appendChild(closeBtn);
+            }
             
             // Reset form
             pledgeForm.reset();
+            
+            // Start countdown animation
+            const countdownProgress = successMessage.querySelector('.countdown-progress');
+            const countdownSeconds = successMessage.querySelector('#countdown-seconds');
+            
+            // Trigger fade in
+            setTimeout(() => {
+                successMessage.classList.add('active');
+            }, 10);
+            
+            // Start progress bar animation
+            setTimeout(() => {
+                countdownProgress.style.transform = 'scaleX(0)';
+            }, 50);
+            
+            // Update countdown seconds
+            let secondsLeft = 3;
+            const countdownInterval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft >= 0) {
+                    countdownSeconds.textContent = secondsLeft;
+                }
+            }, 1000);
+            
+            // Auto redirect after 3 seconds with smooth transition
+            setTimeout(() => {
+                clearInterval(countdownInterval);
+                successMessage.classList.remove('active');
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                    window.location.href = '/';
+                }, 300);
+            }, 3000);
         });
         
         // Save pledge to localStorage
