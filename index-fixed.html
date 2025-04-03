@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <title>Vote Not For Sale - Electoral Integrity Pledge</title>
+    <link rel="stylesheet" href="share-modal.css">
+    <!-- Add Firebase SDK scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-analytics-compat.js"></script>
+    <!-- Initialize Firebase -->
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAWxGHZp6PhpNM71kB9w2yX3eFISvRYEf0",
+            authDomain: "votenotforsaleph.firebaseapp.com",
+            projectId: "votenotforsaleph",
+            storageBucket: "votenotforsaleph.firebasestorage.app",
+            messagingSenderId: "525832942491",
+            appId: "1:525832942491:web:2b94db6735e21efd92273e",
+            measurementId: "G-EBB1FJWWS9"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        firebase.analytics();
+        
+        // Get Firestore reference
+        const db = firebase.firestore();
+        const PLEDGES_COLLECTION = 'pledges';
+        
+        // Function to update pledge counter
+        function updatePledgeCounterFromFirebase() {
+            db.collection(PLEDGES_COLLECTION).get().then((snapshot) => {
+                const count = snapshot.size;
+                updatePledgeCounterUI(count);
+                console.log(`Pledge count updated from Firebase: ${count}`);
+            }).catch((error) => {
+                console.error('Error updating pledge counter from Firebase:', error);
+                // Fallback to local storage count if Firebase fails
+                const localPledges = JSON.parse(localStorage.getItem('pledges')) || [];
+                updatePledgeCounterUI(localPledges.length);
+            });
+        }
+        
+        // Set up a real-time listener for pledge count updates
+        function setupPledgeCountListener() {
+            db.collection(PLEDGES_COLLECTION).onSnapshot((snapshot) => {
+                const count = snapshot.size;
+                updatePledgeCounterUI(count);
+                console.log(`Pledge count updated in real-time: ${count}`);
+            }, (error) => {
+                console.error('Error setting up pledge count listener:', error);
+            });
+        }
+        
+        // Initialize the pledge system
+        function initPledgeSystem() {
+            console.log('Pledge system initializing...');
+            
+            // Update the pledge counter with data from Firebase
+            updatePledgeCounterFromFirebase();
+            
+            // Set up real-time listener for pledge count updates
+            setupPledgeCountListener();
+            
+            // Set up form submission handler
+            setupPledgeFormHandler();
+            
+            console.log('Pledge system initialized successfully');
+        }
+        
+        // Document ready function to initialize Firebase
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Initializing Firebase Pledge System...');
+            setTimeout(() => {
+                initPledgeSystem();
+            }, 1000);
+        });
+    </script>
+    <style>
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        /* Responsive breakpoints */
+        /* Mobile devices */
+        @media screen and (max-width: 480px) {
+            .hero h1 {
+                font-size: 0.91rem; /* Reduced by 30% from 1.3rem */
+                padding: 8px 12px;
+                margin-bottom: 0.8rem;
+                border-width: 2px;
+            }
+            
+            .hero p {
+                font-size: 0.95rem;
+                line-height: 1.4;
+                margin-bottom: 1.5rem;
+                padding: 0 10px;
+                display: block;
+                width: 100%;
+                overflow-wrap: break-word;
+                word-wrap: break-word;
+            }
+            
+            .modal {
+                width: 95%;
+                padding: 1.5rem;
+            }
+            
+            .modal-title {
+                font-size: 1.2rem;
+            }
+            
+            .btn {
+                padding: 0.7rem 1.2rem;
+            }
+            
+            header {
+                padding: 0.8rem 1rem;
+            }
+            
+            .logo {
+                font-size: 1.2rem;
+            }
+            
+            .share-icon {
+                width: 20px;
+                height: 20px;
+            }
+        }
+        
+        /* Tablets */
+        @media screen and (min-width: 481px) and (max-width: 768px) {
+            .hero h1 {
+                font-size: 1.26rem; /* Reduced by 30% from 1.8rem */
+                padding: 12px 20px;
+            }
+            
+            .hero p {
+                font-size: 1.1rem;
+            }
+        }
+        
+        body {
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f8f8;
+        }
+        
+        /* Header styles */
+        header {
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            padding: 1rem 2rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <!-- Your existing body content -->
+    
+    <!-- Add this script at the end of the body to set up pledge form handler -->
+    <script>
+        // Update the pledge counter UI with animation
+        function updatePledgeCounterUI(count) {
+            const pledgeCountElement = document.getElementById('pledge-count');
+            if (!pledgeCountElement) return;
+            
+            // Animate counter
+            const duration = 1000; // 1 second animation
+            const startValue = parseInt(pledgeCountElement.textContent) || 0;
+            const endValue = count;
+            const startTime = performance.now();
+            
+            // Only animate if there's a difference
+            if (startValue !== endValue) {
+                function animateCounter(currentTime) {
+                    const elapsedTime = currentTime - startTime;
+                    const progress = Math.min(elapsedTime / duration, 1);
+                    const currentValue = Math.floor(startValue + (endValue - startValue) * progress);
+                    
+                    pledgeCountElement.textContent = currentValue;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animateCounter);
+                    } else {
+                        pledgeCountElement.textContent = endValue;
+                    }
+                }
+                
+                requestAnimationFrame(animateCounter);
+            } else {
+                pledgeCountElement.textContent = count;
+            }
+        }
+        
+        // Set up the pledge form submission handler
+        function setupPledgeFormHandler() {
+            const pledgeForm = document.getElementById('pledge-form');
+            if (!pledgeForm) return;
+            
+            // Override the existing submit event listener
+            pledgeForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // Get form values
+                const name = document.getElementById('name').value;
+                const city = document.getElementById('city').value;
+                const email = document.getElementById('email').value;
+                
+                // Validate city selection
+                if (!city) {
+                    alert('Please select a city or municipality');
+                    return;
+                }
+                
+                // Create pledge object
+                const pledge = {
+                    name,
+                    city,
+                    email,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Save to localStorage as backup
+                savePledgeToLocalStorage(pledge);
+                
+                // Save to Firebase
+                try {
+                    await db.collection(PLEDGES_COLLECTION).add(pledge);
+                    console.log('Pledge saved to Firebase successfully');
+                } catch (error) {
+                    console.error('Error saving pledge to Firebase:', error);
+                    // Already saved to localStorage as backup, so no additional action needed
+                }
+                
+                // Show success message
+                showSuccessMessage();
+                
+                // Reset form
+                pledgeForm.reset();
+            });
+        }
+        
+        // Save pledge to localStorage as backup
+        function savePledgeToLocalStorage(pledge) {
+            // Get existing pledges or initialize empty array
+            let pledges = JSON.parse(localStorage.getItem('pledges')) || [];
+            
+            // Add new pledge
+            pledges.push(pledge);
+            
+            // Save back to localStorage
+            localStorage.setItem('pledges', JSON.stringify(pledges));
+            
+            console.log('Pledge saved to localStorage as backup');
+        }
+        
+        // Show success message with countdown
+        function showSuccessMessage() {
+            const successMessage = document.getElementById('success-message');
+            if (!successMessage) return;
+            
+            // Show success message popup with smooth transition
+            successMessage.style.display = 'block';
+            
+            // Create countdown elements if they don't exist
+            if (!successMessage.querySelector('.countdown-timer')) {
+                const countdownTimer = document.createElement('div');
+                countdownTimer.className = 'countdown-timer';
+                countdownTimer.innerHTML = 'Redirecting in <span id="countdown-seconds">3</span> seconds...';
+                
+                const countdownBar = document.createElement('div');
+                countdownBar.className = 'countdown-bar';
+                
+                const countdownProgress = document.createElement('div');
+                countdownProgress.className = 'countdown-progress';
+                countdownBar.appendChild(countdownProgress);
+                
+                successMessage.appendChild(countdownTimer);
+                successMessage.appendChild(countdownBar);
+            }
+            
+            // Add close button to success message if not already added
+            if (!successMessage.querySelector('.close-success')) {
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'close-success';
+                closeBtn.innerHTML = '×';
+                closeBtn.onclick = function() {
+                    // Fade out and redirect
+                    successMessage.classList.remove('active');
+                    setTimeout(() => {
+                        successMessage.style.display = 'none';
+                        window.location.href = '/';
+                    }, 300);
+                };
+                successMessage.appendChild(closeBtn);
+            }
+            
+            // Start countdown animation
+            const countdownProgress = successMessage.querySelector('.countdown-progress');
+            const countdownSeconds = successMessage.querySelector('#countdown-seconds');
+            
+            // Trigger fade in
+            setTimeout(() => {
+                successMessage.classList.add('active');
+            }, 10);
+            
+            // Start progress bar animation
+            setTimeout(() => {
+                countdownProgress.style.transform = 'scaleX(0)';
+            }, 50);
+            
+            // Update countdown seconds
+            let secondsLeft = 3;
+            const countdownInterval = setInterval(() => {
+                secondsLeft--;
+                if (secondsLeft >= 0) {
+                    countdownSeconds.textContent = secondsLeft;
+                }
+            }, 1000);
+            
+            // Auto redirect after 3 seconds with smooth transition
+            setTimeout(() => {
+                clearInterval(countdownInterval);
+                successMessage.classList.remove('active');
+                setTimeout(() => {
+                    successMessage.style.display = 'none';
+                    window.location.href = '/';
+                }, 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
