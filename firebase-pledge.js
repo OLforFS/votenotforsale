@@ -1,7 +1,26 @@
 // Firebase Pledge System Implementation
 
-// Import Firebase utilities from firebase-config.js
-import { db, saveToFirestore, getCollectionCount, setupCollectionListener } from './firebase-config.js';
+// Import Firebase utilities from firebase.js
+import { db as firestoreDb, saveToFirestore, getCollectionCount, setupCollectionListener } from './firebase.js';
+
+// Ensure we have access to Firebase auth
+// This assumes firebase is available globally via firebase-init-compat.js
+
+// Initialize Firestore database
+// First try to get db from window.firebase (compat version), then from the module import
+let db;
+
+// Check if we have access to Firebase via the compatibility version
+if (window.firebase && window.firebase.firestore) {
+  // Use the db instance from the compatibility version
+  db = window.firebase.db || window.firebase.firestore();
+  console.log('Using Firebase Firestore from compatibility version');
+} else {
+  // If not available, we'll rely on the imported functions from firebase.js
+  console.log('Firebase compatibility version not available, using module imports');
+  // Use the db imported from firebase.js
+  db = firestoreDb;
+}
 
 // Collection name for pledges
 const PLEDGES_COLLECTION = 'pledges';
@@ -100,21 +119,70 @@ function setupPledgeFormHandler() {
       return;
     }
     
+    // Check if user is authenticated
+    // This uses the global firebase object from firebase-init-compat.js
+    const user = window.firebase && window.firebase.auth ? window.firebase.auth().currentUser : null;
+    
     // Create pledge object
     const pledge = {
       name,
       city,
-      email,
-      timestamp: new Date().toISOString()
+      email
     };
+    
+    // Add user ID if authenticated
+    if (user) {
+      pledge.userId = user.uid;
+      // Use server timestamp for authenticated users
+      if (db) {
+        pledge.timestamp = firebase.firestore.FieldValue.serverTimestamp();
+      } else {
+        pledge.timestamp = new Date().toISOString();
+      }
+    } else {
+      // Use local timestamp for anonymous users
+      pledge.timestamp = new Date().toISOString();
+    }
     
     // Save to localStorage as backup
     savePledgeToLocalStorage(pledge);
     
     // Save to Firebase
     try {
-      await saveToFirestore(PLEDGES_COLLECTION, pledge);
-      console.log('Pledge saved to Firebase successfully');
+      if (user && db) {
+        try {
+          // For authenticated users, use the Firebase example pattern with proper error handling
+          db.collection(PLEDGES_COLLECTION).add(pledge)
+            .then(() => {
+              console.log("Pledge submitted!");
+              // Update the counter immediately for better user feedback
+              updatePledgeCounterFromFirebase();
+              // Show success message
+              showSuccessMessage();
+              // Reset form
+              pledgeForm.reset();
+            })
+            .catch((error) => {
+              console.error("Error writing pledge:", error);
+              alert('There was an issue saving your pledge. Please try again.');
+            });
+        } catch (error) {
+          console.error('Error using Firestore compatibility version:', error);
+          // Fallback to module pattern
+          await saveToFirestore(PLEDGES_COLLECTION, pledge);
+          console.log('Pledge saved to Firebase using module pattern');
+          showSuccessMessage();
+          pledgeForm.reset();
+        }
+      } else {
+        // For anonymous users or when using the module pattern, use the existing saveToFirestore function
+        await saveToFirestore(PLEDGES_COLLECTION, pledge);
+        console.log('Pledge saved to Firebase successfully');
+        // Show success message
+        showSuccessMessage();
+        // Reset form
+        pledgeForm.reset();
+      }
     } catch (error) {
       console.error('Error saving pledge to Firebase:', error);
       // Already saved to localStorage as backup, so no additional action needed

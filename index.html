@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="format-detection" content="telephone=no">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#3498db">
+    <meta name="msapplication-tap-highlight" content="no">
     <title>Vote Not For Sale - Electoral Integrity Pledge</title>
     <link rel="stylesheet" href="share-modal.css">
     <!-- Add Firebase SDK scripts -->
@@ -13,6 +16,28 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-analytics-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
+    <!-- Initialize Firebase using our compatibility script -->
+    <script src="firebase-init-compat.js"></script>
+    <!-- WebView optimization script -->
+    <script src="webview.js" defer></script>
+        
+        // Get Firestore and Auth references
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        
+        // Make Firebase services available globally
+        window.firebase = {
+            app: firebase,
+            analytics: firebase.analytics(),
+            auth: auth,
+            db: db,
+            firestore: {
+                FieldValue: firebase.firestore.FieldValue
+            }
+        };
+        
+        console.log('Firebase initialized successfully');
+    </script>
     <style>
         /* Reset and base styles */
         * {
@@ -803,7 +828,7 @@
             <a href="index.html" class="active">Home</a>
             <a href="comments.html">Comments</a>
         </div>
-        <div class="auth-buttons" id="auth-buttons">
+        <div class="auth-buttons" id="auth-buttons" style="display: none;">
             <button class="auth-btn login-btn" id="login-btn">Log In</button>
             <button class="auth-btn signup-btn" id="signup-btn">Sign Up</button>
         </div>
@@ -847,18 +872,18 @@
             <form id="pledge-form">
                 <div class="form-group">
                     <label for="name">Name <span class="required">*</span></label>
-                    <input type="text" id="name" required>
+                    <input type="text" id="name" required autocomplete="name">
                 </div>
                 
                 <div class="form-group">
                     <label for="city">City or Municipality <span class="required">*</span></label>
                     <div class="custom-dropdown">
                         <div class="search-dropdown-container">
-                            <input type="text" id="city-search" placeholder="Search for your city..." autocomplete="off">
+                            <input type="text" id="city-search" placeholder="Search for your city..." autocomplete="address-level2">
                             <div class="dropdown-arrow" id="dropdown-arrow"></div>
                         </div>
                         <div class="custom-dropdown-options" id="city-options"></div>
-                        <select id="city" required style="display: none;">
+                        <select id="city" required style="display: none;" autocomplete="address-level2">
                             <option value="" disabled selected>Select your city or municipality</option>
                         </select>
                     </div>
@@ -866,7 +891,7 @@
                 
                 <div class="form-group">
                     <label for="email">Email (optional)</label>
-                    <input type="email" id="email">
+                    <input type="email" id="email" autocomplete="email">
                 </div>
                 
 
@@ -2910,6 +2935,9 @@
             const lineWebView = ua.indexOf('line') > -1;
             const twitterWebView = ua.indexOf('twitter') > -1;
             const linkedinWebView = ua.indexOf('linkedin') > -1;
+            const pinterestWebView = ua.indexOf('pinterest') > -1;
+            const snapchatWebView = ua.indexOf('snapchat') > -1;
+            const tiktokWebView = ua.indexOf('tiktok') > -1 || ua.indexOf('musical_ly') > -1;
             
             // Mobile app webviews
             const iosWKWebView = typeof window.webkit !== 'undefined' && window.webkit.messageHandlers;
@@ -2917,9 +2945,15 @@
             const flutterWebView = typeof window.flutter_inappwebview !== 'undefined';
             const cordovaWebView = typeof window.cordova !== 'undefined';
             const capacitorWebView = typeof window.Capacitor !== 'undefined';
+            const ionicWebView = typeof window.Ionic !== 'undefined';
             
             // Additional platform checks
             const ieWebView = window.MSStream && !window.MSPointerEvent;
+            
+            // Check for common webview properties
+            const noServiceWorker = !('serviceWorker' in navigator);
+            const limitedStorage = typeof navigator.storage === 'undefined' || typeof navigator.storage.persist !== 'function';
+            const noDeviceMemory = typeof navigator.deviceMemory === 'undefined';
             const androidInterface = typeof window.Android !== 'undefined';
             const iosInterface = typeof window.webkit !== 'undefined' && !iosWKWebView; // Avoid duplicate detection with iosWKWebView
             
@@ -2929,15 +2963,21 @@
             // Combined result
             const result = androidWebView || genericWebView || 
                           facebookWebView || instagramWebView || lineWebView || 
-                          twitterWebView || linkedinWebView || iosWKWebView || 
+                          twitterWebView || linkedinWebView || pinterestWebView ||
+                          snapchatWebView || tiktokWebView || iosWKWebView || 
                           reactNativeWebView || flutterWebView || cordovaWebView || 
-                          capacitorWebView || ieWebView || androidInterface || 
+                          capacitorWebView || ionicWebView || ieWebView || androidInterface || 
                           iosInterface || isStandalone;
             
-            // Cache the result
-            sessionStorage.setItem('isWebView', result.toString());
+            // Additional heuristic checks for webviews
+            const heuristicResult = result || 
+                                   (noServiceWorker && limitedStorage && noDeviceMemory) ||
+                                   (window.innerWidth === screen.width && window.innerHeight === screen.height);
             
-            return result;
+            // Cache the result
+            sessionStorage.setItem('isWebView', heuristicResult.toString());
+            
+            return heuristicResult;
         };
         
         // Apply enhanced webview-specific adjustments - moved to DOMContentLoaded for consistency
@@ -3084,7 +3124,7 @@
             }, 3000);
         });
         
-        // Save pledge to localStorage
+        // Save pledge to localStorage and Firebase
         function savePledge(pledge) {
             // Get existing pledges or initialize empty array
             let pledges = JSON.parse(localStorage.getItem('pledges')) || [];
@@ -3094,6 +3134,32 @@
             
             // Save back to localStorage
             localStorage.setItem('pledges', JSON.stringify(pledges));
+            console.log('Pledge saved to localStorage as backup');
+            
+            // Save to Firebase with proper error handling
+            try {
+                // Get Firestore instance safely
+                let db;
+                if (window.firebase && window.firebase.db) {
+                    db = window.firebase.db;
+                } else if (typeof firebase !== 'undefined' && firebase.firestore) {
+                    db = firebase.firestore();
+                }
+                
+                if (db && typeof db.collection === 'function') {
+                    db.collection('pledges').add(pledge)
+                        .then((docRef) => {
+                            console.log('Pledge saved to Firebase successfully with ID:', docRef.id);
+                        })
+                        .catch((error) => {
+                            console.error('Error saving pledge to Firebase:', error);
+                        });
+                } else {
+                    throw new Error('Firestore database not properly initialized');
+                }
+            } catch (error) {
+                console.error('Error accessing Firebase:', error);
+            }
             
             // Update pledge counter
             updatePledgeCounter();
@@ -3104,8 +3170,43 @@
         // Update pledge counter function
         function updatePledgeCounter() {
             const pledgeCountElement = document.getElementById('pledge-count');
-            const pledges = JSON.parse(localStorage.getItem('pledges')) || [];
-            const count = pledges.length;
+            
+            // Try to get count from Firebase first
+            try {
+                // Access Firebase through the global window.firebase object
+                let db;
+                if (window.firebase && window.firebase.db) {
+                    db = window.firebase.db;
+                } else if (typeof firebase !== 'undefined' && firebase.firestore) {
+                    db = firebase.firestore();
+                }
+                
+                if (db && typeof db.collection === 'function') {
+                    db.collection('pledges').get().then((snapshot) => {
+                        const count = snapshot.size;
+                        animatePledgeCounter(count);
+                        console.log(`Pledge count updated from Firebase: ${count}`);
+                    }).catch((error) => {
+                        console.error('Error getting pledge count from Firebase:', error);
+                        // Fall back to localStorage if Firebase fails
+                        const pledges = JSON.parse(localStorage.getItem('pledges')) || [];
+                        animatePledgeCounter(pledges.length);
+                    });
+                } else {
+                    throw new Error('Firestore database not properly initialized');
+                }
+            } catch (error) {
+                console.error('Error accessing Firebase:', error);
+                // Fall back to localStorage
+                const pledges = JSON.parse(localStorage.getItem('pledges')) || [];
+                animatePledgeCounter(pledges.length);
+            }
+        }
+        
+        // Animate the pledge counter
+        function animatePledgeCounter(count) {
+            const pledgeCountElement = document.getElementById('pledge-count');
+            if (!pledgeCountElement) return;
             
             // Animate counter
             const duration = 1000; // 1 second animation
@@ -3255,6 +3356,10 @@
             /* Fix Android keyboard issues */
             height: 100%;
             overflow: hidden;
+            /* Improve scrolling performance */
+            -webkit-overflow-scrolling: touch;
+            /* Prevent pull-to-refresh */
+            overscroll-behavior-y: none;
         }
         
         /* Fix for iOS webview specific issues */
@@ -3262,6 +3367,29 @@
             /* Fix iOS safe area issues */
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+            /* Improve scrolling */
+            -webkit-overflow-scrolling: touch;
+            /* Prevent rubber-banding effect */
+            overscroll-behavior: none;
+        }
+        
+        /* Social media webview optimizations */
+        .webview-active .social-share-buttons {
+            /* Larger touch targets for social media webviews */
+            padding: 12px;
+            margin: 8px;
+        }
+        
+        /* Optimize form elements for webviews */
+        .webview-active select {
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg fill='black' height='24' viewBox='0 0 24 24' width='24' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 30px;
         }
     </style>
     
@@ -3290,12 +3418,38 @@
                     viewportMeta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
                 }
                 
+                // Add viewport-fit meta tag if not present
+                if (!document.querySelector('meta[name="viewport-fit"]')) {
+                    const viewportFitMeta = document.createElement('meta');
+                    viewportFitMeta.name = 'viewport-fit';
+                    viewportFitMeta.content = 'cover';
+                    document.head.appendChild(viewportFitMeta);
+                }
+                
                 // Disable pull-to-refresh in Android WebView
                 document.addEventListener('touchmove', function(e) {
                     if (document.documentElement.scrollTop === 0) {
                         e.preventDefault();
                     }
                 }, { passive: false });
+                
+                // Optimize scrolling performance
+                document.documentElement.style.webkitOverflowScrolling = 'touch';
+                
+                // Fix for specific webview keyboard issues
+                const allInputs = document.querySelectorAll('input, textarea, select');
+                allInputs.forEach(input => {
+                    // Prevent zoom on focus in iOS
+                    input.style.fontSize = '16px';
+                    
+                    // Improve touch feedback
+                    input.style.touchAction = 'manipulation';
+                    
+                    // Fix iOS autocorrect issues
+                    if (input.type === 'text' || input.type === 'search') {
+                        input.autocorrect = 'off';
+                    }
+                });
                 
                 // Detect platform for specific optimizations
                 const ua = navigator.userAgent.toLowerCase();
@@ -3442,11 +3596,11 @@
             <form class="auth-form" id="login-form">
                 <div class="form-group">
                     <label for="login-email">Email or Phone Number</label>
-                    <input type="text" id="login-email" placeholder="Email or Philippine phone number (e.g., 09123456789)" required>
+                    <input type="text" id="login-email" placeholder="Email or Philippine phone number (e.g., 09123456789)" required autocomplete="email">
                 </div>
                 <div class="form-group">
                     <label for="login-password">Password</label>
-                    <input type="password" id="login-password" required>
+                    <input type="password" id="login-password" required autocomplete="current-password">
                 </div>
                 <button type="submit" class="auth-submit-btn">Log In</button>
                 <div class="auth-switch">
@@ -3466,15 +3620,15 @@
             <form class="auth-form" id="signup-form">
                 <div class="form-group">
                     <label for="signup-name">Name</label>
-                    <input type="text" id="signup-name" required>
+                    <input type="text" id="signup-name" required autocomplete="name">
                 </div>
                 <div class="form-group">
                     <label for="signup-email">Email or Phone Number</label>
-                    <input type="text" id="signup-email" placeholder="Email or Philippine phone number (e.g., +639123456789)" required>
+                    <input type="text" id="signup-email" placeholder="Email or Philippine phone number (e.g., +639123456789)" required autocomplete="email">
                 </div>
                 <div class="form-group">
                     <label for="signup-password">Password</label>
-                    <input type="password" id="signup-password" required>
+                    <input type="password" id="signup-password" required autocomplete="new-password">
                 </div>
                 <button type="submit" class="auth-submit-btn">Sign Up</button>
                 <div class="auth-switch">
@@ -3484,10 +3638,6 @@
         </div>
     </div>
     
-    <!-- Firebase Initialization Script -->
-    <script src="firebase-init.js"></script>
-    
-    <!-- Firebase Auth Script -->
-    <script src="firebase-auth.js"></script>
+    <!-- Firebase scripts are already loaded in the head section as modules -->
 </body>
 </html>

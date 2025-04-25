@@ -33,6 +33,11 @@
         const db = firebase.firestore();
         const PLEDGES_COLLECTION = 'pledges';
         
+        // Log Firebase initialization status
+        console.log('Firebase initialized:', !!firebase);
+        console.log('Firestore initialized:', !!db);
+        console.log('Using collection:', PLEDGES_COLLECTION);
+        
         // Function to update pledge counter
         function updatePledgeCounterFromFirebase() {
             db.collection(PLEDGES_COLLECTION).get().then((snapshot) => {
@@ -173,10 +178,207 @@
             font-weight: bold;
             color: #2c3e50;
         }
+        
+        /* Main content styles */
+        main {
+            padding-top: 80px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-bottom: 2rem;
+        }
+        
+        /* Hero section styles */
+        .hero {
+            text-align: center;
+            padding: 2rem 1rem;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+        
+        .hero h1 {
+            display: inline-block;
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 1rem;
+            padding: 10px 20px;
+            border: 3px solid #e74c3c;
+            border-radius: 4px;
+        }
+        
+        #pledge-counter-container {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin: 1rem 0;
+            color: #e74c3c;
+        }
+        
+        /* Form styles */
+        .pledge-form-container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            padding: 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .pledge-form h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        .btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .btn-primary {
+            background-color: #e74c3c;
+            width: 100%;
+        }
+        
+        /* Success message styles */
+        .success-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            text-align: center;
+            z-index: 1000;
+            max-width: 90%;
+            width: 400px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .success-message.active {
+            opacity: 1;
+        }
+        
+        .success-message h3 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+        
+        .countdown-bar {
+            height: 4px;
+            background-color: #eee;
+            margin-top: 1.5rem;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .countdown-progress {
+            height: 100%;
+            width: 100%;
+            background-color: #e74c3c;
+            transform-origin: left;
+            transform: scaleX(1);
+            transition: transform 3s linear;
+        }
+        
+        .countdown-timer {
+            margin-top: 1rem;
+            font-size: 0.9rem;
+            color: #7f8c8d;
+        }
+        
+        .close-success {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
     </style>
 </head>
 <body>
-    <!-- Your existing body content -->
+    <header>
+        <div class="logo">Vote Not For Sale</div>
+    </header>
+    
+    <main>
+        <section class="hero">
+            <h1>Electoral Integrity Pledge</h1>
+            <p>Join thousands of Filipinos in pledging to protect the integrity of our elections.</p>
+            <div id="pledge-counter-container">
+                <span>Current Pledges: <span id="pledge-count">0</span></span>
+            </div>
+        </section>
+        
+        <section class="pledge-form-container">
+            <form id="pledge-form" class="pledge-form">
+                <h2>Take the Pledge</h2>
+                <div class="form-group">
+                    <label for="name">Your Name</label>
+                    <input type="text" id="name" name="name" required placeholder="Enter your full name">
+                </div>
+                <div class="form-group">
+                    <label for="city">City/Municipality</label>
+                    <select id="city" name="city" required>
+                        <option value="">Select your city or municipality</option>
+                        <option value="Manila">Manila</option>
+                        <option value="Quezon City">Quezon City</option>
+                        <option value="Davao">Davao</option>
+                        <option value="Cebu">Cebu</option>
+                        <!-- More options would be loaded dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email address">
+                </div>
+                <button type="submit" class="btn btn-primary">Submit My Pledge</button>
+            </form>
+        </section>
+        
+        <div id="success-message" class="success-message" style="display: none;">
+            <h3>Thank You for Your Pledge!</h3>
+            <p>Your commitment to electoral integrity has been recorded.</p>
+        </div>
+    </main>
     
     <!-- Add this script at the end of the body to set up pledge form handler -->
     <script>
@@ -246,10 +448,25 @@
                 
                 // Save to Firebase
                 try {
-                    await db.collection(PLEDGES_COLLECTION).add(pledge);
-                    console.log('Pledge saved to Firebase successfully');
+                    console.log('Attempting to save pledge to Firebase collection:', PLEDGES_COLLECTION);
+                    console.log('Pledge data:', JSON.stringify(pledge));
+                    console.log('Firebase db object:', db);
+                    
+                    // Ensure Firestore is properly initialized
+                    if (!db || typeof db.collection !== 'function') {
+                        throw new Error('Firestore database not properly initialized');
+                    }
+                    
+                    // Add the document with explicit error handling
+                    const docRef = await db.collection(PLEDGES_COLLECTION).add(pledge);
+                    console.log('Pledge saved to Firebase successfully with ID:', docRef.id);
+                    
+                    // Update the counter immediately for better user feedback
+                    updatePledgeCounterFromFirebase();
                 } catch (error) {
                     console.error('Error saving pledge to Firebase:', error);
+                    console.error('Error details:', error.code, error.message);
+                    alert('There was an issue saving your pledge to our database. Your pledge has been saved locally and will sync when connection is restored.');
                     // Already saved to localStorage as backup, so no additional action needed
                 }
                 

@@ -2,7 +2,8 @@
 
 // This module handles Firebase authentication functionality for the Vote Not For Sale web app
 
-// Initialize auth when Firebase is available
+// Make this a module script to work with firebase-init-new.js
+// Import Firebase auth if needed (will use window.firebase.auth if available)
 let auth;
 
 // Current user state
@@ -10,8 +11,9 @@ let currentUser = null;
 
 // Initialize the auth module
 function initAuth() {
-    if (typeof firebase !== 'undefined') {
-        auth = firebase.auth();
+    // Check if Firebase auth is available from the window object (set by firebase-init-new.js)
+    if (window.firebase && window.firebase.auth) {
+        auth = window.firebase.auth;
         
         // Listen for auth state changes
         auth.onAuthStateChanged(user => {
@@ -116,38 +118,295 @@ function setupAuthUIListeners() {
     // Get DOM elements
     const loginBtn = document.getElementById('login-btn');
     const signupBtn = document.getElementById('signup-btn');
-    const loginModal = document.getElementById('login-modal');
-    const signupModal = document.getElementById('signup-modal');
+    let loginModal = document.getElementById('login-modal');
+    let signupModal = document.getElementById('signup-modal');
     const closeLoginModal = document.getElementById('close-login-modal');
     const closeSignupModal = document.getElementById('close-signup-modal');
     const switchToSignup = document.getElementById('switch-to-signup');
     const switchToLogin = document.getElementById('switch-to-login');
     const loginForm = document.getElementById('login-form');
     const signupForm = document.getElementById('signup-form');
-    
+    const loginModalOverlay = document.getElementById('login-modal'); // Assuming overlay has same ID as modal
+    const signupModalOverlay = document.getElementById('signup-modal'); // Assuming overlay has same ID as modal
+
     // Check if we're on a page with auth UI elements
-    if (!loginBtn || !signupBtn) return;
+    if (!loginBtn || !signupBtn || !loginModal || !signupModal) return;
+
+    // --- Add Event Listeners for Modals ---
+
+    // Open Login Modal
+    loginBtn.addEventListener('click', () => {
+        loginModal.classList.add('active');
+    });
+
+    // Open Signup Modal
+    signupBtn.addEventListener('click', () => {
+        signupModal.classList.add('active');
+    });
+
+    // Close Login Modal
+    if (closeLoginModal) {
+        closeLoginModal.addEventListener('click', () => {
+            loginModal.classList.remove('active');
+        });
+    }
+    // Close Signup Modal
+    if (closeSignupModal) {
+        closeSignupModal.addEventListener('click', () => {
+            signupModal.classList.remove('active');
+        });
+    }
+
+    // Close modal when clicking overlay (for both modals)
+    if (loginModalOverlay) {
+        loginModalOverlay.addEventListener('click', (e) => {
+            if (e.target === loginModalOverlay) { // Only close if clicking the overlay itself
+                loginModal.classList.remove('active');
+            }
+        });
+    }
+    if (signupModalOverlay) {
+        signupModalOverlay.addEventListener('click', (e) => {
+            if (e.target === signupModalOverlay) { // Only close if clicking the overlay itself
+                signupModal.classList.remove('active');
+            }
+        });
+    }
+
+    // Switch from Login to Signup
+    if (switchToSignup) {
+        switchToSignup.addEventListener('click', (e) => {
+            e.preventDefault();
+            loginModal.classList.remove('active');
+            signupModal.classList.add('active');
+        });
+    }
+
+    // Switch from Signup to Login
+    if (switchToLogin) {
+        switchToLogin.addEventListener('click', (e) => {
+            e.preventDefault();
+            signupModal.classList.remove('active');
+            loginModal.classList.add('active');
+        });
+    }
+
+    // --- End Event Listeners for Modals ---
+
+    // Handle signup form submission
+    if (signupForm) {
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            
+            try {
+                // Create user with email and password
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                // Update user profile with display name
+                await userCredential.user.updateProfile({
+                    displayName: name
+                });
+                // Add user data to Firestore
+                const db = window.firebase.db;
+                await db.collection('users').doc(userCredential.user.uid).set({
+                    name: name,
+                    email: email,
+                    createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+                });
+                // Close signup modal and reset form
+                signupModal.classList.remove('active');
+                signupForm.reset();
+                // Show success message with animation
+                const successMessage = document.createElement('div');
+                successMessage.id = 'auth-success-message';
+                successMessage.innerHTML = `
+                    <div class="success-content">
+                        <span class="success-icon">✓</span>
+                        <p>Account created successfully!</p>
+                        <div class="countdown-bar">
+                            <div class="countdown-progress"></div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(successMessage);
+                // Add styles if not already present
+                if (!document.getElementById('auth-notification-styles')) {
+                    const styles = document.createElement('style');
+                    styles.id = 'auth-notification-styles';
+                    styles.textContent = `
+                        #auth-success-message {
+                            position: fixed;
+                            top: 20px;
+                            right: 20px;
+                            background: #4CAF50;
+                            color: white;
+                            padding: 15px;
+                            border-radius: 4px;
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                            opacity: 0;
+                            transform: translateX(100%);
+                            transition: all 0.3s ease;
+                            z-index: 1000;
+                        }
+                        #auth-success-message.active {
+                            opacity: 1;
+                            transform: translateX(0);
+                        }
+                        .success-content {
+                            display: flex;
+                            align-items: center;
+                        }
+                        .success-icon {
+                            font-size: 24px;
+                            margin-right: 10px;
+                        }
+                        .countdown-bar {
+                            width: 100px;
+                            height: 4px;
+                            background: rgba(255,255,255,0.3);
+                            border-radius: 2px;
+                            margin-left: 10px;
+                            overflow: hidden;
+                        }
+                        .countdown-progress {
+                            width: 100%;
+                            height: 100%;
+                            background: white;
+                            animation: countdown 2s linear forwards;
+                        }
+                        @keyframes countdown {
+                            from { width: 100%; }
+                            to { width: 0; }
+                        }
+                    `;
+                    document.head.appendChild(styles);
+                }
+                setTimeout(() => {
+                    successMessage.classList.add('active');
+                    setTimeout(() => {
+                        successMessage.classList.remove('active');
+                        setTimeout(() => successMessage.remove(), 300);
+                    }, 2000);
+                }, 100);
+            } catch (error) {
+                console.error('Signup error:', error);
+                // Show error message with animation
+                const errorMessage = document.createElement('div');
+                errorMessage.id = 'auth-error-message';
+                errorMessage.innerHTML = `
+                    <div class="error-content">
+                        <span class="error-icon">⚠</span>
+                        <p>${error.message || 'Signup failed. Please try again.'}</p>
+                        <div class="countdown-bar">
+                            <div class="countdown-progress"></div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(errorMessage);
+                if (!document.getElementById('auth-notification-styles')) {
+                    const styles = document.createElement('style');
+                    styles.id = 'auth-notification-styles';
+                    styles.textContent = `
+                        #auth-error-message {
+                            position: fixed;
+                            top: 20px;
+                            right: 20px;
+                            background: #f44336;
+                            color: white;
+                            padding: 15px;
+                            border-radius: 4px;
+                            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                            opacity: 0;
+                            transform: translateX(100%);
+                            transition: all 0.3s ease;
+                            z-index: 1000;
+                        }
+                        #auth-error-message.active {
+                            opacity: 1;
+                            transform: translateX(0);
+                        }
+                        .error-content {
+                            display: flex;
+                            align-items: center;
+                        }
+                        .error-icon {
+                            font-size: 24px;
+                            margin-right: 10px;
+                        }
+                        .countdown-bar {
+                            width: 100px;
+                            height: 4px;
+                            background: rgba(255,255,255,0.3);
+                            border-radius: 2px;
+                            margin-left: 10px;
+                            overflow: hidden;
+                        }
+                        .countdown-progress {
+                            width: 100%;
+                            height: 100%;
+                            background: white;
+                            animation: countdown 2s linear forwards;
+                        }
+                        @keyframes countdown {
+                            from { width: 100%; }
+                            to { width: 0; }
+                        }
+                    `;
+                    document.head.appendChild(styles);
+                }
+                setTimeout(() => {
+                    errorMessage.classList.add('active');
+                    setTimeout(() => {
+                        errorMessage.classList.remove('active');
+                        setTimeout(() => errorMessage.remove(), 300);
+                    }, 2000);
+                }, 100);
+            }
+        });
+    }
     
     // Create auth modals if they don't exist
     if (!loginModal || !signupModal) {
         createAuthModals();
+        loginModal = document.getElementById('login-modal');
+        signupModal = document.getElementById('signup-modal');
     }
     
     // Modal event listeners
     if (loginBtn) {
         loginBtn.addEventListener('click', () => {
-            document.getElementById('login-modal').classList.add('active');
+            console.log('Login button clicked');
+            const loginModal = document.getElementById('login-modal');
+            if (loginModal) {
+                loginModal.classList.add('active');
+            } else {
+                console.error('Login modal not found in the DOM');
+                createAuthModals();
+                document.getElementById('login-modal').classList.add('active');
+            }
         });
     }
     
     if (signupBtn) {
         signupBtn.addEventListener('click', () => {
-            document.getElementById('signup-modal').classList.add('active');
+            console.log('Signup button clicked');
+            const signupModal = document.getElementById('signup-modal');
+            if (signupModal) {
+                signupModal.classList.add('active');
+            } else {
+                console.error('Signup modal not found in the DOM');
+                createAuthModals();
+                document.getElementById('signup-modal').classList.add('active');
+            }
         });
     }
     
     // Close buttons for modals
     document.querySelectorAll('.close-auth-modal').forEach(button => {
+        // Add event listener directly instead of cloning and replacing
         button.addEventListener('click', () => {
             button.closest('.auth-modal-overlay').classList.remove('active');
         });
@@ -155,6 +414,7 @@ function setupAuthUIListeners() {
     
     // Switch between login and signup
     if (switchToSignup) {
+        // Add event listener directly instead of cloning and replacing
         switchToSignup.addEventListener('click', () => {
             document.getElementById('login-modal').classList.remove('active');
             document.getElementById('signup-modal').classList.add('active');
@@ -162,6 +422,7 @@ function setupAuthUIListeners() {
     }
     
     if (switchToLogin) {
+        // Add event listener directly instead of cloning and replacing
         switchToLogin.addEventListener('click', () => {
             document.getElementById('signup-modal').classList.remove('active');
             document.getElementById('login-modal').classList.add('active');
@@ -177,19 +438,24 @@ function setupAuthUIListeners() {
     
     // Login form submission
     if (loginForm) {
+        // Add event listener directly instead of cloning and replacing
         loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             
+            console.log('Login form submitted with email:', email);
+            
             auth.signInWithEmailAndPassword(email, password)
                 .then((userCredential) => {
+                    console.log('Login successful');
                     // Close modal
                     document.getElementById('login-modal').classList.remove('active');
                     loginForm.reset();
                 })
                 .catch((error) => {
+                    console.error('Login error:', error);
                     alert(`Login error: ${error.message}`);
                 });
         });
@@ -197,34 +463,86 @@ function setupAuthUIListeners() {
     
     // Signup form submission
     if (signupForm) {
-        signupForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
-            const name = document.getElementById('signup-name').value;
-            const email = document.getElementById('signup-email').value;
-            const password = document.getElementById('signup-password').value;
-            
-            auth.createUserWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    // Update profile with display name
-                    return userCredential.user.updateProfile({
-                        displayName: name
-                    });
-                })
-                .then(() => {
-                    // Close modal
-                    document.getElementById('signup-modal').classList.remove('active');
-                    signupForm.reset();
-                })
-                .catch((error) => {
-                    alert(`Signup error: ${error.message}`);
-                });
-        });
+        console.log('Setting up signup form submission handler');
+        
+        // Add event listener to the signup button instead of form submission
+        const signupSubmitBtn = document.getElementById('signup-submit-btn');
+        if (signupSubmitBtn) {
+            console.log('Adding click event listener to signup button');
+            signupSubmitBtn.addEventListener('click', function(event) {
+                console.log('Signup button clicked');
+                
+                // Stop event propagation to prevent conflicts
+                event.stopPropagation();
+                
+                const name = document.getElementById('signup-name').value;
+                const emailOrPhone = document.getElementById('signup-email').value.trim();
+                const password = document.getElementById('signup-password').value;
+                
+                // Check if input is a Philippine phone number
+                const isPhilippinePhone = /^(\+?639|09)\d{9}$/.test(emailOrPhone);
+                
+                if (isPhilippinePhone) {
+                    // Format phone number to international format for Firebase
+                    let formattedPhone = emailOrPhone;
+                    if (emailOrPhone.startsWith('09')) {
+                        formattedPhone = '+63' + emailOrPhone.substring(1);
+                    } else if (emailOrPhone.startsWith('639')) {
+                        formattedPhone = '+' + emailOrPhone;
+                    }
+                    
+                    console.log('Attempting to sign up with phone number:', formattedPhone);
+                    
+                    // For phone authentication, we need to set up reCAPTCHA verification
+                    alert('Phone authentication is not fully implemented yet. Please use an email address to sign up.');
+                    
+                    // This is where phone authentication would be implemented
+                    // We would need to set up reCAPTCHA and use signInWithPhoneNumber
+                    // For now, we'll just show an error message
+                } else {
+                    // Proceed with email authentication
+                    console.log('Attempting to sign up with email:', emailOrPhone);
+                    
+                    auth.createUserWithEmailAndPassword(emailOrPhone, password)
+                        .then((userCredential) => {
+                            // Update profile with display name
+                            return userCredential.user.updateProfile({
+                                displayName: name
+                            });
+                        })
+                        .then(() => {
+                            // Close modal
+                            document.getElementById('signup-modal').classList.remove('active');
+                            signupForm.reset();
+                            console.log('User registered successfully');
+                        })
+                        .catch((error) => {
+                            console.error('Signup error:', error);
+                            alert(`Signup error: ${error.message}`);
+                        });
+                }
+            });
+        }
     }
 }
 
+// Initialize auth when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Create auth modals first to ensure they exist
+    createAuthModals();
+    addAuthModalStyles();
+    // Then initialize auth
+    setTimeout(initAuth, 100);
+    // Remove signup button event listener here to avoid duplicate/conflicting logic
+});
+
+// Make createAuthModals function globally accessible
+window.firebase = window.firebase || {};
+window.firebase.createAuthModals = createAuthModals;
+
 // Create auth modals if they don't exist in the DOM
 function createAuthModals() {
+    console.log('Creating auth modals');
     // Check if modals already exist
     if (document.getElementById('login-modal') && document.getElementById('signup-modal')) {
         return;
@@ -267,20 +585,20 @@ function createAuthModals() {
                 <h2 class="auth-modal-title">Sign Up</h2>
                 <button class="close-auth-modal" id="close-signup-modal">&times;</button>
             </div>
-            <form class="auth-form" id="signup-form">
+            <form class="auth-form" id="signup-form" onsubmit="return false;">
                 <div class="form-group">
                     <label for="signup-name">Name</label>
                     <input type="text" id="signup-name" required>
                 </div>
                 <div class="form-group">
-                    <label for="signup-email">Email</label>
-                    <input type="email" id="signup-email" required>
+                    <label for="signup-email">Email or Phone Number</label>
+                    <input type="text" id="signup-email" placeholder="Email or Philippine phone number (e.g., +639123456789)" required>
                 </div>
                 <div class="form-group">
                     <label for="signup-password">Password</label>
                     <input type="password" id="signup-password" required>
                 </div>
-                <button type="submit" class="auth-submit-btn">Sign Up</button>
+                <button type="button" id="signup-submit-btn" class="auth-submit-btn">Sign Up</button>
                 <div class="auth-switch">
                     Already have an account? <a id="switch-to-login">Log In</a>
                 </div>
@@ -294,6 +612,11 @@ function createAuthModals() {
     
     // Re-setup event listeners
     setupAuthUIListeners();
+    
+    // Add auth modal styles
+    addAuthModalStyles();
+    
+    return { loginModal, signupModal };
 }
 
 // Add auth modal styles if not already present
@@ -314,7 +637,7 @@ function addAuthModalStyles() {
             width: 100%;
             height: 100%;
             background-color: rgba(0,0,0,0.7);
-            display: flex;
+            display: none;
             justify-content: center;
             align-items: center;
             z-index: 1000;
@@ -326,6 +649,9 @@ function addAuthModalStyles() {
         .auth-modal-overlay.active {
             opacity: 1;
             visibility: visible;
+            display: flex !important;
+            pointer-events: auto;
+            z-index: 9999;
         }
         
         .auth-modal {
@@ -422,11 +748,46 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add auth modal styles
     addAuthModalStyles();
     
-    // Initialize auth with a small delay to ensure Firebase is loaded
-    setTimeout(() => {
+    // Load the compatibility version of Firebase initialization
+    const firebaseInitScript = document.createElement('script');
+    firebaseInitScript.src = 'firebase-init-compat.js';
+    firebaseInitScript.onload = function() {
+        console.log('Firebase initialization script loaded');
+    };
+    firebaseInitScript.onerror = function() {
+        console.error('Failed to load Firebase initialization script');
+    };
+    
+    // Check if Firebase is already initialized
+    if (window.firebase && window.firebase.auth) {
+        console.log('Firebase already loaded, initializing auth...');
         initAuth();
-    }, 1000);
+    } else {
+        console.log('Firebase not yet loaded, waiting before initializing auth...');
+        // Initialize auth with a small delay to ensure Firebase is loaded
+        let attempts = 0;
+        const maxAttempts = 15; // Increased max attempts
+        const checkInterval = 300; // Check more frequently
+        
+        const checkFirebase = setInterval(() => {
+            attempts++;
+            if (window.firebase && window.firebase.auth) {
+                console.log(`Firebase available after ${attempts} attempts, initializing auth...`);
+                clearInterval(checkFirebase);
+                initAuth();
+            } else if (attempts >= maxAttempts) {
+                console.error('Firebase still not available after multiple attempts. Check Firebase initialization.');
+                clearInterval(checkFirebase);
+                // Try to load the script again as a last resort
+                document.head.appendChild(firebaseInitScript);
+            }
+        }, checkInterval);
+        
+        // Add the initialization script to the document
+        document.head.appendChild(firebaseInitScript);
+    }
 });
+
 
 // Export functions for use in other scripts
 window.firebaseAuth = {

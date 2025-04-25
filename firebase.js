@@ -7,13 +7,12 @@ import { getFirestore, collection, addDoc, onSnapshot, getCountFromServer } from
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAWxGHZp6PhpNM71kB9w2yX3eFISvRYEf0",
-  authDomain: "votenotforsaleph.firebaseapp.com",
-  projectId: "votenotforsaleph",
-  storageBucket: "votenotforsaleph.firebasestorage.app",
-  messagingSenderId: "525832942491",
-  appId: "1:525832942491:web:2b94db6735e21efd92273e",
-  measurementId: "G-EBB1FJWWS9"
+  apiKey: "AIzaSyBCNY7zWuipfrxlrToo7Lco6dc51RQKUeQ",
+  authDomain: "myvoteisnotforsale-eb79e.firebaseapp.com",
+  projectId: "myvoteisnotforsale-eb79e",
+  storageBucket: "myvoteisnotforsale-eb79e.firebasestorage.app",
+  messagingSenderId: "787887322996",
+  appId: "1:787887322996:web:29b41d348ac5b7bed69e21"
 };
 
 // Initialize Firebase
