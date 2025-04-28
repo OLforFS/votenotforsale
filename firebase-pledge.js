@@ -102,97 +102,44 @@ function setupPledgeFormHandler() {
   const pledgeForm = document.getElementById('pledge-form');
   if (!pledgeForm) return;
   
-  // Override the existing submit event listener
   pledgeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    // Get form values
+
     const name = document.getElementById('name').value;
-    // Use the search input value instead of the dropdown value
     const citySearch = document.getElementById('city-search');
-    const city = citySearch.value.trim();
+    const city = citySearch ? citySearch.value.trim() : '';
     const email = document.getElementById('email').value;
-    
-    // Validate city input
+
     if (!city) {
       alert('Please enter a city or municipality');
       return;
     }
-    
-    // Check if user is authenticated
-    // This uses the global firebase object from firebase-init-compat.js
-    const user = window.firebase && window.firebase.auth ? window.firebase.auth().currentUser : null;
-    
-    // Create pledge object
+
     const pledge = {
       name,
       city,
-      email
+      email,
+      timestamp: new Date().toISOString()
     };
-    
-    // Add user ID if authenticated
-    if (user) {
-      pledge.userId = user.uid;
-      // Use server timestamp for authenticated users
-      if (db) {
-        pledge.timestamp = firebase.firestore.FieldValue.serverTimestamp();
-      } else {
-        pledge.timestamp = new Date().toISOString();
-      }
-    } else {
-      // Use local timestamp for anonymous users
-      pledge.timestamp = new Date().toISOString();
-    }
-    
+
     // Save to localStorage as backup
     savePledgeToLocalStorage(pledge);
-    
-    // Save to Firebase
+
+    // Save to Firebase using modular SDK only
     try {
-      if (user && db) {
-        try {
-          // For authenticated users, use the Firebase example pattern with proper error handling
-          db.collection(PLEDGES_COLLECTION).add(pledge)
-            .then(() => {
-              console.log("Pledge submitted!");
-              // Update the counter immediately for better user feedback
-              updatePledgeCounterFromFirebase();
-              // Show success message
-              showSuccessMessage();
-              // Reset form
-              pledgeForm.reset();
-            })
-            .catch((error) => {
-              console.error("Error writing pledge:", error);
-              alert('There was an issue saving your pledge. Please try again.');
-            });
-        } catch (error) {
-          console.error('Error using Firestore compatibility version:', error);
-          // Fallback to module pattern
-          await saveToFirestore(PLEDGES_COLLECTION, pledge);
-          console.log('Pledge saved to Firebase using module pattern');
-          showSuccessMessage();
-          pledgeForm.reset();
-        }
-      } else {
-        // For anonymous users or when using the module pattern, use the existing saveToFirestore function
-        await saveToFirestore(PLEDGES_COLLECTION, pledge);
-        console.log('Pledge saved to Firebase successfully');
-        // Show success message
-        showSuccessMessage();
-        // Reset form
-        pledgeForm.reset();
-      }
+      await saveToFirestore(PLEDGES_COLLECTION, pledge);
+      console.log('Pledge saved to Firebase successfully');
+      // Update the counter immediately for better user feedback
+      updatePledgeCounterFromFirebase();
+      // Show success message
+      showSuccessMessage();
+      // Reset form
+      pledgeForm.reset();
     } catch (error) {
       console.error('Error saving pledge to Firebase:', error);
-      // Already saved to localStorage as backup, so no additional action needed
+      alert('There was an issue saving your pledge. Please try again.');
+      // Already saved to localStorage as backup
     }
-    
-    // Show success message
-    showSuccessMessage();
-    
-    // Reset form
-    pledgeForm.reset();
   });
 }
 

@@ -1,4894 +1,847 @@
 // Comments and Authentication functionality
 
-// Variables for Firebase services
+// Use globally available Firebase services from firebase-init-compat.js
 let db;
 let auth;
-let currentUser = null;
+let currentUser = null; // Keep track of the currently logged-in user
 let commentsCollection;
 let likesCollection;
 let repliesCollection;
-let signOutBtn;
 
-// Initialize Firebase references
+// Initialize Firebase references and UI elements
 document.addEventListener('DOMContentLoaded', () => {
-    // Check if Firebase is available
-    if (window.firebase) {
+    // Check if Firebase services are available globally
+    if (window.firebase && window.firebase.db && window.firebase.auth) {
         // Get Firestore and Auth references from the window.firebase object
         db = window.firebase.db;
-        auth = window.firebase.auth;
-        
-        // Initialize collections
+        auth = window.firebase.auth(); // Get auth instance
+
+        // Initialize Firestore collection references
         commentsCollection = db.collection('comments');
-        likesCollection = db.collection('likes');
-        repliesCollection = db.collection('replies');
-        
-        // Initialize UI
-        initializeUI();
-        
-        // Check authentication state
-        // UI updates based on auth state are handled by firebase-auth.js
+        likesCollection = db.collection('likes'); // Collection for storing likes
+        repliesCollection = db.collection('replies'); // Collection for storing replies
+
+        // Initialize UI elements specific to comments
+        initializeCommentUI();
+
+        // Listen for authentication state changes to update currentUser and UI
         auth.onAuthStateChanged(user => {
+             currentUser = user; // Update the global currentUser variable
              if (user) {
                  // User is signed in
-                 currentUser = user;
-                 loadComments(); // Load comments relevant to the user
+                 console.log('User signed in (comments.js):', user.uid);
+                 // Enable comment form (handled by firebase-auth.js, but ensure consistency)
+                 enableCommentForm(); // Make sure this function exists or is handled globally
              } else {
                  // User is signed out
+                 console.log('User signed out (comments.js)');
                  currentUser = null;
-                 loadComments(); // Still load comments, interaction state handled by firebase-auth.js
+                 // Disable comment form (handled by firebase-auth.js, but ensure consistency)
+                 disableCommentForm(); // Make sure this function exists or is handled globally
              }
+             // Load comments regardless of auth state, but interaction depends on currentUser
+             loadComments();
          });
-        
-        // Auth form handlers are managed by firebase-auth.js
-        
-        console.log('Firebase services initialized in comments.js');
+
+        console.log('Firebase services initialized successfully in comments.js');
     } else {
-        console.error('Firebase is not available in comments.js. Check initialization.');
+        console.error('Firebase db or auth is not available globally (window.firebase). comments.js initialization failed.');
+        // Optionally display an error message to the user on the page
+        const commentsList = document.getElementById('comments-list');
+        if (commentsList) {
+            commentsList.innerHTML = '<p class="error-loading">Could not connect to the commenting service. Please refresh the page.</p>';
+        }
     }
 });
 
-// Utility function to show notifications
-function showAuthNotification(message, type = 'success') {
-    let notification = document.getElementById('auth-notification');
-    if (!notification) {
-        notification = document.createElement('div');
-        notification.id = 'auth-notification';
-        document.body.appendChild(notification);
-    }
-    notification.textContent = message;
-    notification.className = `auth-notification ${type}`;
-    notification.style.display = 'block';
-    setTimeout(() => {
-        notification.style.display = 'none';
-    }, 3000);
-    // Add styles if not present
-    if (!document.getElementById('auth-notification-style')) {
-        const style = document.createElement('style');
-        style.id = 'auth-notification-style';
-        style.textContent = `
-        .auth-notification {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #323232;
-            color: #fff;
-            padding: 14px 28px;
-            border-radius: 6px;
-            font-size: 1rem;
-            z-index: 9999;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            opacity: 0.97;
-            transition: opacity 0.3s;
-        }
-        .auth-notification.success { background: #4CAF50; }
-        .auth-notification.error { background: #f44336; }
-        `;
-        document.head.appendChild(style);
-    }
-}
-
-// Authentication form handlers and sign out are managed by firebase-auth.js
-
-// Initialize UI elements specific to comments
-function initializeUI() {
+// Initialize UI elements specific to the comments section
+function initializeCommentUI() {
     // DOM Elements needed for comments
     window.commentForm = document.getElementById('comment-form');
     window.commentInput = document.getElementById('comment-input');
-    window.postCommentBtn = document.getElementById('post-comment-btn');
+    window.postCommentBtn = document.getElementById('post-comment-btn'); // Assuming button ID is this
     window.commentsList = document.getElementById('comments-list');
 
-    // Setup event listeners specific to comments
-    setupCommentEventListeners();
-    
-    // Comment form enabled/disabled state is handled by firebase-auth.js based on auth state
+    // Check if elements exist before adding listeners
+    if (window.commentForm && window.commentInput && window.postCommentBtn && window.commentsList) {
+        // Setup event listeners specific to comments
+        setupCommentEventListeners();
+    } else {
+        console.warn('One or more comment UI elements (form, input, button, list) not found.');
+    }
+
+    // Initial state of the comment form is handled by the onAuthStateChanged listener
 }
 
 // Setup event listeners specific to comment functionality
 function setupCommentEventListeners() {
     // Comment form submission
     if (window.commentForm) {
-        // Use submit event on the form itself
         window.commentForm.addEventListener('submit', (e) => {
-            e.preventDefault(); // Prevent default form submission
+            e.preventDefault(); // Prevent default form submission which reloads the page
             postComment();
         });
+    } else {
+         console.error("Comment form not found, cannot add submit listener.");
     }
 
-    // Add listeners for dynamic elements like reply/like buttons inside loadComments or similar
+    // Add listeners for dynamic elements (like, reply buttons) inside the comments list
+    // Use event delegation on the commentsList container
+    if (window.commentsList) {
+        window.commentsList.addEventListener('click', handleCommentInteraction);
+    } else {
+        console.error("Comments list not found, cannot add interaction listener.");
+    }
 }
 
-// Event listeners for auth modals, user profile display, and comment form state are handled by firebase-auth.js
+// Handle clicks within the comments list (for likes, replies, etc.)
+function handleCommentInteraction(event) {
+    const target = event.target;
+    const commentElement = target.closest('.comment'); // Find the parent comment element
 
-// Post comment function (Keep and ensure it uses currentUser correctly)
+    if (!commentElement) return; // Click was not inside a comment
+
+    const commentId = commentElement.dataset.id;
+
+    // Handle Like button click
+    if (target.classList.contains('like-btn')) {
+        toggleLike(commentId, target);
+    }
+
+    // Handle Reply button click
+    if (target.classList.contains('reply-btn')) {
+        // Implement reply functionality (e.g., show reply form)
+        console.log(`Reply clicked for comment: ${commentId}`);
+        showReplyForm(commentElement); // Example function call
+    }
+
+    // Handle Submit Reply button click (if reply form is dynamically added)
+    if (target.classList.contains('submit-reply-btn')) {
+        const replyForm = target.closest('.reply-form');
+        const replyInput = replyForm.querySelector('.reply-input');
+        postReply(commentId, replyInput.value.trim(), replyForm);
+    }
+     // Handle Delete button click
+    if (target.classList.contains('delete-btn')) {
+        const commentUserId = commentElement.dataset.userId; // Assuming you add data-user-id to the comment element
+        if (currentUser && currentUser.uid === commentUserId) {
+            if (confirm('Are you sure you want to delete this comment?')) {
+                deleteComment(commentId, commentElement);
+            }
+        } else {
+            showAuthNotification('You can only delete your own comments.', 'error');
+        }
+    }
+}
+
+
+// Post a new comment to Firestore
 function postComment() {
+    if (!window.commentInput) {
+        console.error("Comment input element not found.");
+        return;
+    }
     const commentText = window.commentInput.value.trim();
 
-    if (!commentText) return;
+    // Check if user is logged in
     if (!currentUser) {
-        showAuthNotification('Please log in to post a comment', 'error');
-        // Attempt to open the login modal if it exists
+        showAuthNotification('Please log in to post a comment.', 'error');
+        // Optionally, trigger the login modal to open
         document.getElementById('login-modal')?.classList.add('active');
         return;
     }
 
-    const comment = {
+    // Check if comment text is empty
+    if (!commentText) {
+        showAuthNotification('Comment cannot be empty.', 'error');
+        return;
+    }
+
+    // Disable button while posting
+    if(window.postCommentBtn) window.postCommentBtn.disabled = true;
+
+
+    // Prepare comment data object
+    const commentData = {
         text: commentText,
         userId: currentUser.uid,
+        // Get displayName from auth, fallback to email part if needed
         userName: currentUser.displayName || currentUser.email.split('@')[0],
-        userAvatar: currentUser.photoURL || '', // Add avatar URL if available
+        // Get photoURL from auth, fallback to empty string or default avatar
+        userAvatar: currentUser.photoURL || '',
+        // Use Firestore server timestamp for consistent time across clients
         createdAt: window.firebase.firestore.FieldValue.serverTimestamp(),
-        likeCount: 0,
+        likeCount: 0, // Initialize like count
         replyCount: 0 // Initialize reply count
     };
 
-    console.log('Attempting to add comment:', comment);
+    console.log('Attempting to add comment:', commentData);
 
-    commentsCollection.add(comment)
-        .then(() => {
-            console.log('Comment added successfully');
-            window.commentInput.value = '';
-            // Optionally show success notification
-            // showAuthNotification('Comment posted!', 'success');
+    // Add the comment document to the 'comments' collection
+    commentsCollection.add(commentData)
+        .then((docRef) => {
+            console.log('Comment added successfully with ID:', docRef.id);
+            window.commentInput.value = ''; // Clear the input field
+            showAuthNotification('Comment posted!', 'success');
+            // No need to manually reload comments if using onSnapshot listener
         })
         .catch(error => {
             console.error('Error adding comment:', error);
             showAuthNotification('Error posting comment. Please try again.', 'error');
+        })
+        .finally(() => {
+             // Re-enable button
+            if(window.postCommentBtn) window.postCommentBtn.disabled = false;
         });
 }
 
-// ... rest of the comments-specific functions (loadComments, displayComment, etc.) ...
+// Load comments from Firestore and display them
+// Use onSnapshot for real-time updates
+let commentsListener = null; // Variable to hold the listener unsubscribe function
 
-// Ensure loadComments is defined and handles rendering comments, likes, replies
-async function loadComments() {
+function loadComments() {
     if (!commentsCollection) {
-        console.error("Comments collection not initialized.");
+        console.error("Comments collection not initialized. Cannot load comments.");
+        if (window.commentsList) window.commentsList.innerHTML = '<p class="error-loading">Error: Comment service not available.</p>';
         return;
     }
-    console.log("Loading comments...");
-    window.commentsList.innerHTML = '<p class="loading-comments">Loading comments...</p>'; // Show loading indicator
 
-    try {
-        const snapshot = await commentsCollection.orderBy('createdAt', 'desc').limit(50).get();
-        window.commentsList.innerHTML = ''; // Clear loading/previous comments
-        if (snapshot.empty) {
-            window.commentsList.innerHTML = '<p>No comments yet. Be the first to share your thoughts!</p>';
-            return;
-        }
-        snapshot.forEach(doc => {
-            displayComment(doc);
-        });
-    } catch (error) {
-        console.error("Error loading comments: ", error);
-        window.commentsList.innerHTML = '<p class="error-loading">Error loading comments. Please try refreshing the page.</p>';
+    console.log("Setting up real-time comments listener...");
+    if (window.commentsList) window.commentsList.innerHTML = '<p class="loading-comments">Loading comments...</p>'; // Show loading indicator
+
+    // Unsubscribe from previous listener if it exists
+    if (commentsListener) {
+        console.log("Unsubscribing from previous comments listener.");
+        commentsListener();
     }
+
+    // Listen for real-time updates, ordered by creation date
+    commentsListener = commentsCollection.orderBy('createdAt', 'desc')
+        // .limit(50) // Optionally limit the number of comments loaded initially
+        .onSnapshot(async (snapshot) => {
+            console.log(`Received ${snapshot.docChanges().length} comment changes.`);
+            if (!window.commentsList) return; // Ensure list element exists
+
+            if (snapshot.empty) {
+                window.commentsList.innerHTML = '<p>No comments yet. Be the first to share your thoughts!</p>';
+                return;
+            }
+
+            // Process changes (added, modified, removed) for efficiency
+            for (const change of snapshot.docChanges()) {
+                const commentId = change.doc.id;
+                const commentElement = window.commentsList.querySelector(`.comment[data-id="${commentId}"]`);
+
+                if (change.type === "added") {
+                    console.log("New comment added:", commentId);
+                    // Display the new comment, potentially checking if it already exists due to latency
+                    if (!commentElement) {
+                         await displayComment(change.doc); // Pass the DocumentSnapshot
+                    } else {
+                        console.warn(`Comment element ${commentId} already exists, skipping add.`);
+                        // Optionally update it anyway if needed
+                        // await updateCommentElement(commentElement, change.doc);
+                    }
+                }
+                if (change.type === "modified") {
+                    console.log("Comment modified:", commentId);
+                    // Update the existing comment element
+                    if (commentElement) {
+                        await updateCommentElement(commentElement, change.doc); // Pass element and new data
+                    } else {
+                         console.warn(`Comment element ${commentId} not found for modification, adding instead.`);
+                         await displayComment(change.doc); // Add if somehow missing
+                    }
+                }
+                if (change.type === "removed") {
+                    console.log("Comment removed:", commentId);
+                    // Remove the comment element from the DOM
+                    if (commentElement) {
+                        commentElement.remove();
+                    } else {
+                         console.warn(`Comment element ${commentId} not found for removal.`);
+                    }
+                }
+            }
+
+             // Clear loading message if it's still there after processing initial batch
+            const loadingMessage = window.commentsList.querySelector('.loading-comments');
+            if (loadingMessage) loadingMessage.remove();
+
+            // Re-sort comments visually if order might have changed (e.g., due to modification timestamp updates)
+            // This is a simple approach; more complex sorting might be needed depending on requirements.
+            sortCommentElements();
+
+
+        }, (error) => {
+            console.error("Error listening to comments collection: ", error);
+            if (window.commentsList) window.commentsList.innerHTML = '<p class="error-loading">Error loading comments. Please try refreshing.</p>';
+            // Potentially show a notification to the user
+            showAuthNotification('Could not load comments.', 'error');
+        });
 }
 
-// Display a single comment
+// Helper function to sort comment elements in the DOM based on timestamp
+function sortCommentElements() {
+    if (!window.commentsList) return;
+    const comments = Array.from(window.commentsList.querySelectorAll('.comment'));
+    comments.sort((a, b) => {
+        const timeA = parseInt(a.dataset.timestamp || '0', 10);
+        const timeB = parseInt(b.dataset.timestamp || '0', 10);
+        return timeB - timeA; // Descending order (newest first)
+    });
+    // Re-append sorted elements
+    comments.forEach(comment => window.commentsList.appendChild(comment));
+}
+
+
+// Display a single comment document
+// Takes a Firestore DocumentSnapshot as input
 async function displayComment(doc) {
-    const comment = doc.data();
+    if (!window.commentsList) return;
+
+    const commentData = doc.data();
     const commentId = doc.id;
+
+    // Basic validation of comment data
+    if (!commentData || !commentData.userId || !commentData.text || !commentData.createdAt) {
+        console.warn(`Skipping invalid comment data for ID: ${commentId}`, commentData);
+        return;
+    }
+
+    // Create the main comment container
     const commentElement = document.createElement('div');
     commentElement.classList.add('comment');
-    commentElement.dataset.id = commentId;
+    commentElement.dataset.id = commentId; // Store comment ID
+    commentElement.dataset.userId = commentData.userId; // Store user ID for deletion check
+    // Store timestamp for sorting
+    commentElement.dataset.timestamp = commentData.createdAt?.seconds || Date.now() / 1000;
 
-    const userInitial = comment.userName ? comment.userName.charAt(0).toUpperCase() : '?';
-    const avatarColor = getUserColor(comment.userId);
 
-    // Check if user has liked this comment
-    let isLiked = false;
-    if (currentUser) {
-        const likeQuery = await likesCollection
-            .where('userId', '==', currentUser.uid)
-            .where('itemId', '==', commentId)
-            .where('itemType', '==', 'comment')
-            .limit(1)
-            .get();
-        isLiked = !likeQuery.empty;
+    // User Info section
+    const userInfo = document.createElement('div');
+    userInfo.classList.add('comment-user-info');
+    const userAvatar = document.createElement('img');
+    userAvatar.classList.add('comment-avatar');
+    // Use provided avatar or a default placeholder
+    userAvatar.src = commentData.userAvatar || 'img/default-avatar.png'; // Make sure you have a default avatar image
+    userAvatar.alt = `${commentData.userName || 'User'}'s avatar`;
+    const userNameSpan = document.createElement('span');
+    userNameSpan.classList.add('comment-username');
+    // Use displayName or fallback
+    userNameSpan.textContent = commentData.userName || 'Anonymous';
+    // Generate a consistent color for the username based on userId
+    userNameSpan.style.color = getUserColor(commentData.userId);
+
+    userInfo.appendChild(userAvatar);
+    userInfo.appendChild(userNameSpan);
+
+    // Comment Content section
+    const commentContent = document.createElement('div');
+    commentContent.classList.add('comment-content');
+    const commentTextP = document.createElement('p');
+    commentTextP.classList.add('comment-text');
+    // Escape HTML to prevent XSS attacks
+    commentTextP.textContent = commentData.text; // Use textContent for safety
+    const commentMeta = document.createElement('div');
+    commentMeta.classList.add('comment-meta');
+    const commentTimestamp = document.createElement('span');
+    commentTimestamp.classList.add('comment-timestamp');
+    // Format the timestamp (handle potential null value)
+    commentTimestamp.textContent = commentData.createdAt ? formatDate(commentData.createdAt.toDate()) : 'Just now';
+    commentMeta.appendChild(commentTimestamp);
+
+    commentContent.appendChild(commentTextP);
+    commentContent.appendChild(commentMeta);
+
+    // Comment Actions section (Like, Reply, Delete)
+    const commentActions = document.createElement('div');
+    commentActions.classList.add('comment-actions');
+
+    // Like Button
+    const likeButton = document.createElement('button');
+    likeButton.classList.add('like-btn');
+    likeButton.innerHTML = `<i class="fas fa-thumbs-up"></i> Like (<span class="like-count">${commentData.likeCount || 0}</span>)`; // Using Font Awesome icon example
+    // Check if current user has liked this comment
+    await checkUserLike(commentId, likeButton);
+
+    // Reply Button
+    const replyButton = document.createElement('button');
+    replyButton.classList.add('reply-btn');
+    replyButton.innerHTML = `<i class="fas fa-reply"></i> Reply`;
+
+    // Delete Button (only show if the current user is the author)
+    let deleteButton = null;
+    if (currentUser && currentUser.uid === commentData.userId) {
+        deleteButton = document.createElement('button');
+        deleteButton.classList.add('delete-btn');
+        deleteButton.innerHTML = `<i class="fas fa-trash-alt"></i> Delete`;
     }
 
-    commentElement.innerHTML = `
-        <div class="comment-header">
-            <div class="comment-avatar" style="background-color: ${avatarColor};">${userInitial}</div>
-            <span class="comment-author">${comment.userName || 'Anonymous'}</span>
-            <span class="comment-timestamp">${formatTimestamp(comment.createdAt)}</span>
-        </div>
-        <div class="comment-body">
-            <p>${escapeHTML(comment.text)}</p>
-        </div>
-        <div class="comment-actions">
-            <button class="like-btn ${isLiked ? 'liked' : ''}" data-id="${commentId}" data-type="comment">
-                <i class="fas fa-thumbs-up"></i> <span class="like-count">${comment.likeCount || 0}</span>
-            </button>
-            <button class="reply-btn" data-id="${commentId}">
-                <i class="fas fa-reply"></i> Reply (<span class="reply-count">${comment.replyCount || 0}</span>)
-            </button>
-        </div>
-        <div class="reply-form-container" id="reply-form-${commentId}" style="display: none;">
-            <textarea placeholder="Write a reply..."></textarea>
-            <button class="post-reply-btn">Post Reply</button>
-            <button class="cancel-reply-btn">Cancel</button>
-        </div>
-        <div class="replies-container" id="replies-${commentId}"></div>
+    commentActions.appendChild(likeButton);
+    commentActions.appendChild(replyButton);
+    if (deleteButton) {
+        commentActions.appendChild(deleteButton);
+    }
+
+    // Replies Section (placeholder for where replies will be loaded)
+    const repliesContainer = document.createElement('div');
+    repliesContainer.classList.add('replies-container');
+    repliesContainer.id = `replies-${commentId}`;
+    // Load replies for this comment (implement loadReplies function)
+    // loadReplies(commentId, repliesContainer);
+
+    // Reply Form (initially hidden)
+    const replyFormContainer = document.createElement('div');
+    replyFormContainer.classList.add('reply-form-container');
+    replyFormContainer.id = `reply-form-${commentId}`;
+    replyFormContainer.style.display = 'none'; // Hide by default
+    replyFormContainer.innerHTML = `
+        <textarea class="reply-input" placeholder="Write a reply..."></textarea>
+        <button class="submit-reply-btn">Submit Reply</button>
     `;
 
+    // Assemble the comment element
+    commentElement.appendChild(userInfo);
+    commentElement.appendChild(commentContent);
+    commentElement.appendChild(commentActions);
+    commentElement.appendChild(replyFormContainer); // Add reply form
+    commentElement.appendChild(repliesContainer); // Add replies container
+
+    // Add the new comment element to the top of the list (or sort later)
+    // window.commentsList.prepend(commentElement); // Prepend for newest first visually immediately
+    // Or append and rely on sorting:
     window.commentsList.appendChild(commentElement);
 
-    // Add event listeners for like and reply buttons
-    const likeButton = commentElement.querySelector('.like-btn');
-    if (likeButton) {
-        likeButton.addEventListener('click', () => handleLike(commentId, 'comment', likeButton));
+    // Remove "no comments" message if present
+    const noCommentsMsg = window.commentsList.querySelector('p:not([class])'); // Basic selector for the message
+    if (noCommentsMsg && noCommentsMsg.textContent.includes('No comments yet')) {
+        noCommentsMsg.remove();
     }
-
-    const replyButton = commentElement.querySelector('.reply-btn');
-    if (replyButton) {
-        replyButton.addEventListener('click', () => toggleReplyForm(commentId));
-    }
-
-    const postReplyButton = commentElement.querySelector('.post-reply-btn');
-    const cancelReplyButton = commentElement.querySelector('.cancel-reply-btn');
-    const replyTextarea = commentElement.querySelector('.reply-form-container textarea');
-
-    if (postReplyButton && replyTextarea) {
-        postReplyButton.addEventListener('click', () => postReply(commentId, replyTextarea));
-    }
-    if (cancelReplyButton) {
-        cancelReplyButton.addEventListener('click', () => toggleReplyForm(commentId, false)); // Force close
-    }
-
-    // Load replies for this comment
-    loadReplies(commentId);
 }
 
-// Format Firestore timestamp
-function formatTimestamp(timestamp) {
-    if (!timestamp) return 'Just now';
-    const date = timestamp.toDate();
+// Update an existing comment element in the DOM
+// Takes the DOM element and a Firestore DocumentSnapshot as input
+async function updateCommentElement(commentElement, doc) {
+    const commentData = doc.data();
+    const commentId = doc.id;
+
+    if (!commentData) return; // No data to update with
+
+    console.log(`Updating comment element: ${commentId}`);
+
+    // Update Like Count
+    const likeCountSpan = commentElement.querySelector('.like-count');
+    if (likeCountSpan) {
+        likeCountSpan.textContent = commentData.likeCount || 0;
+    }
+
+    // Update Timestamp (if needed, though usually static)
+    const commentTimestamp = commentElement.querySelector('.comment-timestamp');
+    if (commentTimestamp && commentData.createdAt) {
+        commentTimestamp.textContent = formatDate(commentData.createdAt.toDate());
+    }
+     // Update timestamp data attribute for sorting
+    commentElement.dataset.timestamp = commentData.createdAt?.seconds || Date.now() / 1000;
+
+
+    // Update Text (if comments are editable - not implemented here)
+    // const commentTextP = commentElement.querySelector('.comment-text');
+    // if (commentTextP && commentTextP.textContent !== commentData.text) {
+    //     commentTextP.textContent = commentData.text;
+    // }
+
+    // Re-check user's like status (in case it changed elsewhere)
+    const likeButton = commentElement.querySelector('.like-btn');
+    if (likeButton) {
+        await checkUserLike(commentId, likeButton);
+    }
+
+    // Update Reply Count (if displayed)
+    // const replyCountSpan = commentElement.querySelector('.reply-count');
+    // if (replyCountSpan) {
+    //     replyCountSpan.textContent = commentData.replyCount || 0;
+    // }
+
+    // Note: If other fields like userName or userAvatar can change, update them here too.
+}
+
+// Toggle like status for a comment
+async function toggleLike(commentId, likeButtonElement) {
+    if (!currentUser) {
+        showAuthNotification('Please log in to like comments.', 'error');
+        document.getElementById('login-modal')?.classList.add('active');
+        return;
+    }
+
+    const userId = currentUser.uid;
+    // Use a composite key for the like document ID for easy lookup
+    const likeDocId = `${userId}_${commentId}`;
+    const likeRef = likesCollection.doc(likeDocId);
+    const commentRef = commentsCollection.doc(commentId);
+
+    console.log(`Toggling like for comment: ${commentId} by user: ${userId}`);
+
+    try {
+        // Use a transaction to ensure atomicity
+        await db.runTransaction(async (transaction) => {
+            const likeDoc = await transaction.get(likeRef);
+            const commentDoc = await transaction.get(commentRef);
+
+            if (!commentDoc.exists) {
+                throw new Error("Comment does not exist.");
+            }
+
+            let currentLikeCount = commentDoc.data().likeCount || 0;
+
+            if (likeDoc.exists) {
+                // User has already liked, so unlike
+                console.log("Unliking comment...");
+                transaction.delete(likeRef);
+                transaction.update(commentRef, { likeCount: window.firebase.firestore.FieldValue.increment(-1) });
+                currentLikeCount--; // For immediate UI update
+                likeButtonElement?.classList.remove('liked'); // Update button style
+            } else {
+                // User hasn't liked, so like
+                console.log("Liking comment...");
+                transaction.set(likeRef, {
+                    userId: userId,
+                    itemId: commentId, // Store comment ID
+                    itemType: 'comment', // Specify item type
+                    createdAt: window.firebase.firestore.FieldValue.serverTimestamp()
+                });
+                transaction.update(commentRef, { likeCount: window.firebase.firestore.FieldValue.increment(1) });
+                currentLikeCount++; // For immediate UI update
+                likeButtonElement?.classList.add('liked'); // Update button style
+            }
+
+            // Update like count display immediately (outside transaction is fine for UI)
+            const likeCountSpan = likeButtonElement?.querySelector('.like-count');
+            if (likeCountSpan) {
+                likeCountSpan.textContent = Math.max(0, currentLikeCount); // Ensure count doesn't go below 0
+            }
+        });
+        console.log("Like transaction successful.");
+
+    } catch (error) {
+        console.error("Error toggling like:", error);
+        showAuthNotification('Error updating like. Please try again.', 'error');
+        // Optionally revert UI changes if transaction failed
+        // await checkUserLike(commentId, likeButtonElement); // Re-check state from DB
+    }
+}
+
+// Check if the current user has liked a specific comment and update button state
+async function checkUserLike(commentId, likeButtonElement) {
+    if (!currentUser || !likeButtonElement) {
+        likeButtonElement?.classList.remove('liked'); // Ensure not liked if logged out
+        return;
+    }
+
+    const userId = currentUser.uid;
+    const likeDocId = `${userId}_${commentId}`;
+    const likeRef = likesCollection.doc(likeDocId);
+
+    try {
+        const likeDoc = await likeRef.get();
+        if (likeDoc.exists) {
+            likeButtonElement.classList.add('liked');
+        } else {
+            likeButtonElement.classList.remove('liked');
+        }
+    } catch (error) {
+        console.error(`Error checking like status for comment ${commentId}:`, error);
+        // Don't change button state on error, might be temporary network issue
+    }
+}
+
+
+// Show or hide the reply form for a specific comment
+function showReplyForm(commentElement) {
+    if (!currentUser) {
+        showAuthNotification('Please log in to reply.', 'error');
+        document.getElementById('login-modal')?.classList.add('active');
+        return;
+    }
+    const commentId = commentElement.dataset.id;
+    const replyForm = document.getElementById(`reply-form-${commentId}`);
+    if (replyForm) {
+        // Toggle visibility
+        const isVisible = replyForm.style.display === 'block';
+        replyForm.style.display = isVisible ? 'none' : 'block';
+        if (!isVisible) {
+            // Focus the input when showing the form
+            replyForm.querySelector('.reply-input')?.focus();
+        }
+    } else {
+        console.error(`Reply form for comment ${commentId} not found.`);
+    }
+}
+
+// Post a reply to a specific comment
+function postReply(commentId, replyText, replyFormElement) {
+     if (!currentUser) {
+        showAuthNotification('Please log in to post a reply.', 'error');
+        document.getElementById('login-modal')?.classList.add('active');
+        return;
+    }
+
+    if (!replyText) {
+        showAuthNotification('Reply cannot be empty.', 'error');
+        return;
+    }
+
+    const replyInput = replyFormElement.querySelector('.reply-input');
+    const submitButton = replyFormElement.querySelector('.submit-reply-btn');
+
+    // Disable form while posting
+    if(replyInput) replyInput.disabled = true;
+    if(submitButton) submitButton.disabled = true;
+
+    const replyData = {
+        text: replyText,
+        userId: currentUser.uid,
+        userName: currentUser.displayName || currentUser.email.split('@')[0],
+        userAvatar: currentUser.photoURL || '', // Add avatar URL
+        commentId: commentId, // Link reply to the parent comment
+        createdAt: window.firebase.firestore.FieldValue.serverTimestamp(),
+        likeCount: 0 // Replies can also be liked
+    };
+
+    console.log(`Attempting to add reply to comment ${commentId}:`, replyData);
+
+    // Add reply to the 'replies' collection
+    repliesCollection.add(replyData)
+        .then(async (docRef) => {
+            console.log('Reply added successfully with ID:', docRef.id);
+            if(replyInput) replyInput.value = ''; // Clear input
+            replyFormElement.style.display = 'none'; // Hide form
+            showAuthNotification('Reply posted!', 'success');
+
+            // Increment replyCount on the parent comment document
+            const commentRef = commentsCollection.doc(commentId);
+            try {
+                 await commentRef.update({
+                     replyCount: window.firebase.firestore.FieldValue.increment(1)
+                 });
+                 console.log(`Incremented replyCount for comment ${commentId}`);
+            } catch (updateError) {
+                 console.error(`Failed to increment replyCount for comment ${commentId}:`, updateError);
+                 // Handle error - maybe retry or log it
+            }
+
+            // Optionally, immediately display the new reply (if replies are shown)
+            // displayReply(docRef.id, replyData, commentId); // Need a displayReply function
+        })
+        .catch(error => {
+            console.error('Error adding reply:', error);
+            showAuthNotification('Error posting reply. Please try again.', 'error');
+        })
+        .finally(() => {
+            // Re-enable form
+            if(replyInput) replyInput.disabled = false;
+            if(submitButton) submitButton.disabled = false;
+        });
+}
+
+// Delete a comment (and potentially its replies and likes - requires careful handling)
+async function deleteComment(commentId, commentElement) {
+    if (!currentUser) {
+        showAuthNotification('Authentication error.', 'error');
+        return;
+    }
+    console.log(`Attempting to delete comment: ${commentId}`);
+
+    const commentRef = commentsCollection.doc(commentId);
+
+    try {
+        // Check ownership again just before deleting (server-side rules are the primary defense)
+        const doc = await commentRef.get();
+        if (!doc.exists) {
+             console.warn(`Comment ${commentId} not found for deletion.`);
+             commentElement?.remove(); // Remove from UI anyway if it exists there
+             return;
+        }
+        if (doc.data().userId !== currentUser.uid) {
+            showAuthNotification('You do not have permission to delete this comment.', 'error');
+            return;
+        }
+
+        // Delete the comment document
+        await commentRef.delete();
+        console.log(`Comment ${commentId} deleted successfully.`);
+        showAuthNotification('Comment deleted.', 'success');
+        // The onSnapshot listener should automatically remove the element from the UI.
+        // If not using onSnapshot, remove manually: commentElement?.remove();
+
+        // **Important Consideration: Deleting associated data (Likes, Replies)**
+        // Deleting a comment should ideally also delete its associated likes and replies.
+        // This typically requires either:
+        // 1. Cloud Functions: A Firebase Cloud Function triggered on comment deletion
+        //    to query and delete related documents in 'likes' and 'replies'. (Recommended for robustness)
+        // 2. Client-Side Deletion: Querying and deleting related documents from the client.
+        //    This is less reliable (client might close browser) and potentially slower.
+        // For simplicity here, we are only deleting the comment document itself.
+        // Implement cleanup logic as needed based on your application's requirements.
+        // Example client-side cleanup (use with caution):
+        // deleteAssociatedData(commentId);
+
+    } catch (error) {
+        console.error(`Error deleting comment ${commentId}:`, error);
+        showAuthNotification('Error deleting comment. Please try again.', 'error');
+    }
+}
+
+// --- Helper Functions ---
+
+// Format Firestore Timestamp or Date object into a readable string
+function formatDate(date) {
+    if (!date || !(date instanceof Date)) {
+        // Handle cases where date might be null or undefined after .toDate()
+        // Or if it's already a number (e.g., from dataset)
+        if (typeof date === 'number') {
+            date = new Date(date); // Assume it's a timestamp number
+        } else {
+            return 'Invalid date';
+        }
+    }
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
+    const weeks = Math.floor(days / 7);
+    const months = Math.floor(days / 30); // Approximate
+    const years = Math.floor(days / 365); // Approximate
 
-    if (seconds < 60) return `${seconds}s ago`;
-    if (minutes < 60) return `${minutes}m ago`;
-    if (hours < 24) return `${hours}h ago`;
-    if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString();
+    if (years > 0) return `${years}y ago`;
+    if (months > 0) return `${months}mo ago`;
+    if (weeks > 0) return `${weeks}w ago`;
+    if (days > 0) return `${days}d ago`;
+    if (hours > 0) return `${hours}h ago`;
+    if (minutes > 0) return `${minutes}m ago`;
+    if (seconds < 5) return 'Just now'; // More immediate feedback
+    return `${seconds}s ago`;
+
+    // Alternative: Absolute date for older comments
+    // if (days < 7) { ... relative time ... }
+    // return date.toLocaleDateString(); // e.g., "1/15/2024"
 }
 
-// Escape HTML to prevent XSS
+
+// Escape HTML to prevent XSS (Simple version)
 function escapeHTML(str) {
+    if (typeof str !== 'string') return '';
     const div = document.createElement('div');
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
+    // More robust libraries like DOMPurify are recommended for production
 }
 
-// Generate a consistent color based on user ID
+// Generate a consistent, visually distinct color based on user ID
 function getUserColor(userId) {
-    if (!userId) return '#cccccc'; // Default color for anonymous
+    if (!userId) return '#888888'; // Default color for missing ID
     let hash = 0;
     for (let i = 0; i < userId.length; i++) {
         hash = userId.charCodeAt(i) + ((hash << 5) - hash);
+        hash = hash & hash; // Convert to 32bit integer
     }
-    const color = (hash & 0x00FFFFFF).toString(16).toUpperCase();
-    return '#' + '00000'.substring(0, 6 - color.length) + color;
+    // Generate a color in HSL space for better visual separation
+    const hue = hash % 360;
+    const saturation = 70 + (hash % 10); // Keep saturation relatively high
+    const lightness = 45 + (hash % 10); // Keep lightness moderate
+    return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }
 
-// Handle liking/unliking comments or replies
-async function handleLike(itemId, itemType, likeButtonElement) {
-    if (!currentUser) {
-        showAuthNotification('Please log in to like.', 'error');
-        document.getElementById('login-modal')?.classList.add('active');
-        return;
-    }
 
-    const userId = currentUser.uid;
-    const likeRef = likesCollection.doc(`${userId}_${itemId}`);
-    const itemRef = (itemType === 'comment' ? commentsCollection : repliesCollection).doc(itemId);
+// --- UI Control Functions ---
 
-    try {
-        const likeDoc = await likeRef.get();
-        const itemDoc = await itemRef.get(); // Get current like count
-        if (!itemDoc.exists) return; // Item might have been deleted
-        let currentLikeCount = itemDoc.data().likeCount || 0;
+// Enable comment form elements when user is logged in
+function enableCommentForm() {
+    if (window.commentInput) window.commentInput.disabled = false;
+    if (window.commentInput) window.commentInput.placeholder = "Write a comment...";
+    if (window.postCommentBtn) window.postCommentBtn.disabled = false;
+    // Hide any "please log in" messages associated with the form
+    const loginPrompt = document.getElementById('comment-login-prompt');
+    if (loginPrompt) loginPrompt.style.display = 'none';
+}
 
-        if (likeDoc.exists) {
-            // User already liked, so unlike
-            await likeRef.delete();
-            await itemRef.update({ likeCount: firebase.firestore.FieldValue.increment(-1) });
-            currentLikeCount--;
-            likeButtonElement?.classList.remove('liked');
-            console.log(`${itemType} unliked successfully`);
-        } else {
-            // User hasn't liked, so like
-            await likeRef.set({
-                userId: userId,
-                itemId: itemId,
-                itemType: itemType,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            await itemRef.update({ likeCount: firebase.firestore.FieldValue.increment(1) });
-            currentLikeCount++;
-            likeButtonElement?.classList.add('liked');
-            console.log(`${itemType} liked successfully`);
-        }
-        // Update like count display immediately
-        const likeCountSpan = likeButtonElement?.querySelector('.like-count');
-        if (likeCountSpan) {
-            likeCountSpan.textContent = currentLikeCount;
-        }
+// Disable comment form elements when user is logged out
+function disableCommentForm() {
+    if (window.commentInput) window.commentInput.disabled = true;
+    if (window.commentInput) window.commentInput.placeholder = "Please log in to comment";
+    if (window.postCommentBtn) window.postCommentBtn.disabled = true;
+     // Show a "please log in" message if applicable
+    const loginPrompt = document.getElementById('comment-login-prompt');
+    if (loginPrompt) loginPrompt.style.display = 'block'; // Or inline
+}
 
-    } catch (error) {
-        console.error(`Error handling like for ${itemType}:`, error);
-        showAuthNotification('Error updating like. Please try again.', 'error');
+// Placeholder for showing notifications (likely defined in another file like firebase-auth.js or a utility file)
+function showAuthNotification(message, type = 'info') {
+    console.log(`Notification (${type}): ${message}`);
+    // Actual implementation would interact with a notification element in the DOM
+    // Example:
+    const notificationElement = document.getElementById('auth-notification');
+    if (notificationElement) {
+        notificationElement.textContent = message;
+        notificationElement.className = `notification ${type}`; // Add type class for styling
+        notificationElement.classList.add('active');
+        // Hide after a few seconds
+        setTimeout(() => {
+            notificationElement.classList.remove('active');
+        }, 4000);
+    } else {
+        // Fallback to alert if notification element doesn't exist
+        // alert(`${type.toUpperCase()}: ${message}`);
     }
 }
 
-// Toggle reply form visibility
-    // We're removing the event listener here to avoid conflicts
-    if (window.signupForm) {
-        console.log('Signup form handling delegated to firebase-auth.js');
-        
-        // Add click event listener to signup button if not already added in firebase-auth.js
-        const signupSubmitBtn = document.getElementById('signup-submit-btn');
-        if (signupSubmitBtn && !signupSubmitBtn._hasClickListener) {
-            signupSubmitBtn._hasClickListener = true;
-            signupSubmitBtn.addEventListener('click', function(event) {
-                console.log('Signup button clicked from comments.js');
-                // The actual signup logic is handled in firebase-auth.js
-            });
-        }
-    }
-    // Post comment
+// --- Potentially needed functions (Implement if required) ---
 
-    // Post comment
-    if (window.postCommentBtn) {
-        window.postCommentBtn.addEventListener('click', () => {
-            const commentText = window.commentInput.value.trim();
-            
-            if (!commentText) return;
-            if (!currentUser) {
-                alert('Please log in to post a comment');
-                return;
-            }
-            
-            const comment = {
-                text: commentText,
-                userId: currentUser.uid,
-                userName: currentUser.displayName || currentUser.email.split('@')[0],
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                likeCount: 0
-            };
-            
-            console.log('Attempting to add comment:', comment);
-            
-            commentsCollection.add(comment)
-                .then(() => {
-                    console.log('Comment added successfully');
-                    window.commentInput.value = '';
-                })
-                .catch(error => {
-                    console.error('Error adding comment:', error);
-                    alert('Error posting comment. Please try again.');
-                });
-        });
-    }
+// function loadReplies(commentId, containerElement) {
+//     // Implementation to fetch and display replies for a comment
+//     // Use repliesCollection.where('commentId', '==', commentId).orderBy('createdAt', 'asc').onSnapshot(...)
+//     console.log(`Placeholder: Load replies for comment ${commentId}`);
+//     containerElement.innerHTML = '<p class="loading-replies">Loading replies...</p>';
+// }
 
-    // Sign out button listener
-    if (window.signOutBtn) {
-        window.signOutBtn.addEventListener('click', handleSignOut);
-    }
-}
+// function displayReply(replyId, replyData, commentId) {
+//     // Implementation to render a single reply element
+//     console.log(`Placeholder: Display reply ${replyId} for comment ${commentId}`);
+//     const repliesContainer = document.getElementById(`replies-${commentId}`);
+//     if (repliesContainer) {
+//         // Create reply element similar to displayComment
+//         const replyElement = document.createElement('div');
+//         // ... populate replyElement ...
+//         repliesContainer.appendChild(replyElement);
+//         // Remove loading/no replies message
+//     }
+// }
 
-// Handle user sign out
-async function handleSignOut() {
-    try {
-        await auth.signOut();
-        showAuthNotification('Signed out successfully', 'success');
-        // Redirect to login page (assuming index.html or reload to show login state)
-        window.location.href = 'index.html'; 
-    } catch (error) {
-        console.error('Sign out error:', error);
-        showAuthNotification(`Sign out failed: ${error.message}`, 'error');
-    }
-}
+// async function deleteAssociatedData(commentId) {
+//     // Example: Client-side deletion of likes and replies (Use with caution)
+//     console.warn(`Deleting associated data for comment ${commentId} from client...`);
+//     const batch = db.batch();
 
-// Add event listeners for comment actions
-function addCommentActionListeners() {
-    // Reaction buttons
-    document.querySelectorAll('.reaction-action').forEach(button => {
-        button.addEventListener('click', () => {
-            if (!currentUser) {
-                alert('Please log in to react to comments');
-                return;
-            }
-            
-            const commentId = button.dataset.commentId;
-            const reactionType = button.dataset.reaction;
-            handleReaction(commentId, reactionType);
-        });
-    });
-    
-    // Reply buttons
-    document.querySelectorAll('.reply-action').forEach(button => {
-        button.addEventListener('click', () => {
-            if (!currentUser) {
-                alert('Please log in to reply to comments');
-                return;
-            }
-            
-            const commentId = button.dataset.commentId;
-            const replyForm = document.getElementById(`reply-form-${commentId}`);
-            replyForm.style.display = replyForm.style.display === 'none' ? 'block' : 'none';
-        });
-    });
-    
-    // Reply submit buttons
-    document.querySelectorAll('.reply-submit').forEach(button => {
-        button.addEventListener('click', () => {
-            const commentId = button.dataset.commentId;
-            const replyInput = button.parentElement.querySelector('.reply-input');
-            const replyText = replyInput.value.trim();
-            
-            if (!replyText) return;
-            
-            const reply = {
-                text: replyText,
-                userId: currentUser.uid,
-                userName: currentUser.displayName || currentUser.email.split('@')[0],
-                commentId: commentId,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            repliesCollection.add(reply)
-                .then(() => {
-                    replyInput.value = '';
-                    document.getElementById(`reply-form-${commentId}`).style.display = 'none';
-                })
-                .catch(error => {
-                    console.error('Error adding reply:', error);
-                    alert('Error posting reply. Please try again.');
-                });
-        });
-    });
-}
+//     // Delete likes
+//     const likesQuery = likesCollection.where('itemId', '==', commentId).where('itemType', '==', 'comment');
+//     const likesSnapshot = await likesQuery.get();
+//     likesSnapshot.forEach(doc => batch.delete(doc.ref));
+//     console.log(`Marked ${likesSnapshot.size} likes for deletion.`);
 
-// Handle reactions to comments
-function handleReaction(commentId, reactionType) {
-    const userId = currentUser.uid;
-    const reactionRef = likesCollection.doc(`${commentId}_${userId}_${reactionType}`);
-    
-    reactionRef.get().then(doc => {
-        if (doc.exists) {
-            // User already reacted - remove reaction
-            return reactionRef.delete().then(() => {
-                return commentsCollection.doc(commentId).update({
-                    [`${reactionType}Count`]: firebase.firestore.FieldValue.increment(-1)
-                });
-            });
-        } else {
-            // Add new reaction
-            return reactionRef.set({
-                userId: userId,
-                commentId: commentId,
-                type: reactionType,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(() => {
-                return commentsCollection.doc(commentId).update({
-                    [`${reactionType}Count`]: firebase.firestore.FieldValue.increment(1)
-                });
-            });
-        }
-    }).catch(error => {
-        console.error('Error handling reaction:', error);
-        alert('Error processing reaction. Please try again.');
-    });
-}
+//     // Delete replies
+//     const repliesQuery = repliesCollection.where('commentId', '==', commentId);
+//     const repliesSnapshot = await repliesQuery.get();
+//     repliesSnapshot.forEach(doc => batch.delete(doc.ref));
+//     console.log(`Marked ${repliesSnapshot.size} replies for deletion.`);
 
-// Check user reactions
-function checkUserReactions(commentId, userId) {
-    likesCollection.where('commentId', '==', commentId)
-        .where('userId', '==', userId)
-        .get()
-        .then(snapshot => {
-            snapshot.forEach(doc => {
-                const reaction = doc.data();
-                const button = document.querySelector(`.reaction-action[data-comment-id="${commentId}"][data-reaction="${reaction.type}"]`);
-                if (button) {
-                    button.classList.add('active');
-                }
-            });
-        })
-        .catch(error => {
-            console.error('Error checking user reactions:', error);
-        });
-}
+//     try {
+//         await batch.commit();
+//         console.log(`Associated data for comment ${commentId} deleted.`);
+//     } catch (error) {
+//         console.error(`Error deleting associated data for comment ${commentId}:`, error);
+//     }
+// }
 
-// Load comments
-function loadComments() {
-    commentsCollection.onSnapshot(snapshot => {
-        const commentsArr = [];
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            data.id = doc.id;
-            // Calculate total reactions
-            let totalReactions = 0;
-            if (data.reactions && typeof data.reactions === 'object') {
-                totalReactions = Object.values(data.reactions).reduce((a, b) => a + b, 0);
-            }
-            data.totalReactions = totalReactions;
-            commentsArr.push(data);
-        });
-        // Sort by total reactions descending, then by createdAt descending
-        commentsArr.sort((a, b) => {
-            if (b.totalReactions !== a.totalReactions) {
-                return b.totalReactions - a.totalReactions;
-            }
-            if (b.createdAt && a.createdAt) {
-                return b.createdAt.seconds - a.createdAt.seconds;
-            }
-            return 0;
-        });
-        renderMasonryComments(commentsArr);
-    }, error => {
-        commentsList.innerHTML = '<p class="error-message">Error loading comments. Please refresh the page.</p>';
-    });
-}
-
-function renderMasonryComments(commentsArr) {
-    // 3-column vertical masonry
-    commentsList.innerHTML = '';
-    const columns = [[], [], []];
-    for (let i = 0; i < commentsArr.length; i++) {
-        columns[i % 3].push(commentsArr[i]);
-    }
-    // Create column containers
-    const masonry = document.createElement('div');
-    masonry.className = 'flex flex-row gap-4 masonry-responsive';
-    for (let col = 0; col < 3; col++) {
-        const colDiv = document.createElement('div');
-        colDiv.className = 'flex flex-col gap-4 flex-1';
-        columns[col].forEach(comment => {
-            colDiv.appendChild(createCommentCard(comment));
-        });
-        masonry.appendChild(colDiv);
-    }
-    commentsList.appendChild(masonry);
-}
-
-function createCommentCard(comment) {
-    const card = document.createElement('div');
-    card.className = 'comment-card flex flex-col';
-    // Profile icon
-    const initial = (comment.userName || 'U')[0].toUpperCase();
-    const profileIcon = `<div class="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center text-xl font-bold">${initial}</div>`;
-    // Timestamp
-    let dateStr = '';
-    if (comment.createdAt && comment.createdAt.toDate) {
-        dateStr = comment.createdAt.toDate().toLocaleString();
-    }
-    // Comment content
-    const content = `<div class="comment-content mb-2">${comment.text || comment.content}</div>`;
-    // Reactions
-    const reactions = [
-        { type: '👍', key: 'thumbs_up' },
-        { type: '❤️', key: 'heart' },
-        { type: '😂', key: 'laugh' },
-        { type: '😢', key: 'cry' }
-    ];
-    let reactionsHtml = '';
-    const userReactions = comment.userReactions || {};
-    let userReactionType = null;
-    if (currentUser && comment.userReactions && comment.userReactions[currentUser.uid]) {
-        userReactionType = comment.userReactions[currentUser.uid];
-    }
-    reactions.forEach(r => {
-        const count = (comment.reactions && comment.reactions[r.type]) ? comment.reactions[r.type] : 0;
-        const active = userReactionType === r.type ? 'active-reaction' : '';
-        reactionsHtml += `<span class="comment-action reaction-action ${active}" data-comment-id="${comment.id}" data-reaction="${r.type}">${r.type} <span>${count}</span></span>`;
-    });
-    // Share button (reuse from index page)
-    const shareBtn = `<button class="share-btn mt-2" data-share-id="${comment.id}" data-share-text="${comment.text || comment.content}">Share</button>`;
-    card.innerHTML = `
-        <div class="flex items-center gap-3 mb-2">${profileIcon}<span class="font-semibold">${comment.userName}</span></div>
-        ${content}
-        <div class="flex items-center justify-between text-xs text-gray-500 mb-1">
-            <span>${dateStr}</span>
-        </div>
-        <div class="flex gap-2 mb-2">${reactionsHtml}</div>
-        ${shareBtn}
-    `;
-    return card;
-}
-
-// Reaction logic: only one reaction per user per comment
-commentsList.addEventListener('click', async (e) => {
-    if (e.target.classList.contains('reaction-action')) {
-        if (!currentUser) {
-            alert('Please log in to react to comments');
-            return;
-        }
-        const commentId = e.target.dataset.commentId;
-        const reactionType = e.target.dataset.reaction;
-        const commentRef = commentsCollection.doc(commentId);
-        const commentSnap = await commentRef.get();
-        if (!commentSnap.exists) return;
-        const data = commentSnap.data();
-        let reactions = data.reactions || {};
-        let userReactions = data.userReactions || {};
-        const prevReaction = userReactions[currentUser.uid];
-        if (prevReaction === reactionType) {
-            // Remove reaction
-            reactions[reactionType] = (reactions[reactionType] || 1) - 1;
-            if (reactions[reactionType] < 0) reactions[reactionType] = 0;
-            delete userReactions[currentUser.uid];
-        } else {
-            // Remove previous reaction if exists
-            if (prevReaction) {
-                reactions[prevReaction] = (reactions[prevReaction] || 1) - 1;
-                if (reactions[prevReaction] < 0) reactions[prevReaction] = 0;
-            }
-            // Add new reaction
-            reactions[reactionType] = (reactions[reactionType] || 0) + 1;
-            userReactions[currentUser.uid] = reactionType;
-        }
-        await commentRef.update({ reactions, userReactions });
-    }
-    // Share button logic
-    if (e.target.classList.contains('share-btn')) {
-        const shareText = e.target.dataset.shareText;
-        const shareUrl = window.location.href.split('#')[0] + '#' + e.target.dataset.shareId;
-        if (navigator.share) {
-            navigator.share({ title: 'Vote Not For Sale', text: shareText, url: shareUrl });
-        } else {
-            // Fallback: open custom share modal
-            window.currentShareData = { title: 'Vote Not For Sale', text: shareText, url: shareUrl };
-            document.getElementById('share-modal-overlay').classList.add('active');
-        }
-    }
-});
-
-
-// Load replies for a comment
-function loadReplies(commentId) {
-    const repliesContainer = document.getElementById(`replies-${commentId}`);
-    
-    repliesCollection.where('commentId', '==', commentId)
-        .orderBy('createdAt', 'asc')
-        .onSnapshot(snapshot => {
-            repliesContainer.innerHTML = '';
-            
-            if (!snapshot.empty) {
-                snapshot.forEach(doc => {
-                    const reply = doc.data();
-                    
-                    // Format date
-                    const date = reply.createdAt ? reply.createdAt.toDate() : new Date();
-                    const formattedDate = date.toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    
-                    const replyElement = document.createElement('div');
-                    replyElement.className = 'reply-item';
-                    replyElement.innerHTML = `
-                        <div class="reply-header">
-                            <span class="reply-author">${reply.userName}</span>
-                            <span class="reply-date">${formattedDate}</span>
-                        </div>
-                        <div class="reply-content">${reply.text}</div>
-                    `;
-                    
-                    repliesContainer.appendChild(replyElement);
-                });
-            }
-        });
-}
-
-// Add event listeners for comment actions (like and reply)
-function addCommentActionListeners() {
-    // Like action
-    document.querySelectorAll('.like-action').forEach(element => {
-        element.addEventListener('click', () => {
-            if (!currentUser) {
-                alert('Please log in to like comments');
-                return;
-            }
-            
-            const commentId = element.dataset.commentId;
-            toggleLike(commentId, currentUser.uid);
-        });
-    });
-    
-    // Reply action
-    document.querySelectorAll('.reply-action').forEach(element => {
-        element.addEventListener('click', () => {
-            if (!currentUser) {
-                alert('Please log in to reply to comments');
-                return;
-            }
-            
-            const commentId = element.dataset.commentId;
-            const replyFormContainer = document.getElementById(`reply-form-${commentId}`);
-            
-            // Toggle reply form visibility
-            if (replyFormContainer.style.display === 'none') {
-                replyFormContainer.style.display = 'block';
-            } else {
-                replyFormContainer.style.display = 'none';
-            }
-        });
-    });
-    
-    // Reply submit
-    document.querySelectorAll('.reply-submit').forEach(button => {
-        button.addEventListener('click', () => {
-            const commentId = button.dataset.commentId;
-            const replyInput = button.previousElementSibling;
-            const replyText = replyInput.value.trim();
-            
-            if (!replyText) return;
-            if (!currentUser) {
-                alert('Please log in to reply');
-                return;
-            }
-            
-            const reply = {
-                commentId: commentId,
-                text: replyText,
-                userId: currentUser.uid,
-                userName: currentUser.displayName || currentUser.email.split('@')[0],
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            repliesCollection.add(reply)
-                .then(() => {
-                    replyInput.value = '';
-                    // Hide the reply form after submitting
-                    document.getElementById(`reply-form-${commentId}`).style.display = 'none';
-                })
-                .catch(error => {
-                    console.error('Error adding reply:', error);
-                    alert('Error posting reply. Please try again.');
-                });
-        });
-    });
-}
-
-// Toggle like on a comment
-function toggleLike(commentId, userId) {
-    const likeRef = likesCollection.doc(`${commentId}_${userId}`);
-    
-    likeRef.get().then(doc => {
-        if (doc.exists) {
-            // User already liked this comment, remove the like
-            return likeRef.delete().then(() => {
-                // Decrement like count
-                return commentsCollection.doc(commentId).update({
-                    likeCount: firebase.firestore.FieldValue.increment(-1)
-                });
-            });
-        } else {
-            // User hasn't liked this comment yet, add the like
-            return likeRef.set({
-                userId: userId,
-                commentId: commentId,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(() => {
-                // Increment like count
-                return commentsCollection.doc(commentId).update({
-                    likeCount: firebase.firestore.FieldValue.increment(1)
-                });
-            });
-        }
-    }).catch(error => {
-        console.error('Error toggling like:', error);
-    });
-}
-
-// Check if user has liked a comment and update UI accordingly
-function checkUserLike(commentId, userId) {
-    likesCollection.doc(`${commentId}_${userId}`).get().then(doc => {
-        const likeAction = document.querySelector(`.like-action[data-comment-id="${commentId}"]`);
-        if (doc.exists) {
-            // User has liked this comment
-            likeAction.classList.add('liked');
-        } else {
-            // User hasn't liked this comment
-            likeAction.classList.remove('liked');
-        }
-    }).catch(error => {
-        console.error('Error checking like status:', error);
-    });
-}
-const shareModalOverlay = document.getElementById('share-modal-overlay');
-const closeShareModal = document.getElementById('close-share-modal');
-if (shareModalOverlay && closeShareModal) {
-    closeShareModal.addEventListener('click', () => {
-        shareModalOverlay.classList.remove('active');
-    });
-    shareModalOverlay.addEventListener('click', (e) => {
-        if (e.target === shareModalOverlay) {
-            shareModalOverlay.classList.remove('active');
-        }
-    });
-}
-function getShareData() {
-    return window.currentShareData || { title: 'Vote Not For Sale', text: '', url: window.location.href };
-}
-function openShareUrl(url) {
-    window.open(url, '_blank', 'noopener');
-}
-const shareFacebook = document.getElementById('share-facebook');
-const shareMessenger = document.getElementById('share-messenger');
-const shareTelegram = document.getElementById('share-telegram');
-const shareWhatsapp = document.getElementById('share-whatsapp');
-const shareTwitter = document.getElementById('share-twitter');
-const shareLinkedin = document.getElementById('share-linkedin');
-const shareEmail = document.getElementById('share-email');
-const shareCopy = document.getElementById('share-copy');
-if (shareFacebook) {
-    shareFacebook.addEventListener('click', (e) => {
-        e.preventDefault();
-        const data = getShareData();
-        const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(data.url)}&quote=${encodeURIComponent(data.text)}`;
-        openShareUrl(url);
-    });
-}
-if (shareMessenger) {
-    shareMessenger.addEventListener('click', (e) => {
-        e.preventDefault();
-        const data = getShareData();
-        const url = `https://www.facebook.com/dialog/send?app_id=936439947551747&link=${encodeURIComponent(data.url)}&redirect_uri=${encodeURIComponent(data.url)}`;
-        openShareUrl(url);
-    });
-}
-if (shareTelegram) {
-    shareTelegram.addEventListener('click', (e) => {
-        e.preventDefault();
-        const data = getShareData();
-        const url = `https://t.me/share/url?url=${encodeURIComponent(data.url)}&text=${encodeURIComponent(data.text)}`;
-        openShareUrl(url);
-    });
-}
-if (shareWhatsapp) {
-    shareWhatsapp.addEventListener('click', (e) => {
-        e.preventDefault();
-        const data = getShareData();
-        const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(data.text + ' ' + data.url)}`;
-        openShareUrl(url);
-    });
-}
-if (shareTwitter) {
-    shareTwitter.addEventListener('click', (e) => {
-        e.preventDefault();
-        const data = getShareData();
-        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(data.text)}&url=${encodeURIComponent(data.url)}`;
-        openShareUrl(url);
-    });
-}
-if (shareLinkedin) {
-    shareLinkedin.addEventListener('click', (e) => {
-        e.preventDefault();
-        const data = getShareData();
-        const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(data.url)}`;
-        openShareUrl(url);
-    });
-}
-if (shareEmail) {
-    shareEmail.addEventListener('click', (e) => {
-        e.preventDefault();
-        const data = getShareData();
-        const url = `mailto:?subject=${encodeURIComponent(data.title)}&body=${encodeURIComponent(data.text + '\n\n' + data.url)}`;
-        window.location.href = url;
-    });
-}
-if (shareCopy) {
-    shareCopy.addEventListener('click', (e) => {
-        e.preventDefault();
-        const data = getShareData();
-        navigator.clipboard.writeText(data.url);
-        shareModalOverlay.classList.remove('active');
-        alert('Share link copied to clipboard!');
-    });
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
-}
+// --- End of comments.js ---
