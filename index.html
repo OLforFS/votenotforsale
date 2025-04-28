@@ -131,12 +131,15 @@
             font-size: 1.5rem;
             font-weight: bold;
             color: #2c3e50;
+            flex: 1;
         }
         
         /* Navigation and auth styles */
         .nav-links {
+            flex: 2;
             display: flex;
-            gap: 1rem;
+            justify-content: center;
+            gap: 1.5rem;
         }
         
         .nav-links a {
@@ -151,7 +154,9 @@
         }
         
         .auth-buttons {
+            flex: 1;
             display: flex;
+            justify-content: flex-end;
             gap: 0.5rem;
         }
         
@@ -824,18 +829,159 @@
     <!-- Header -->
     <header>
         <div class="logo">Vote Not For Sale</div>
+        <!-- Removed navigation links
         <div class="nav-links">
             <a href="index.html" class="active">Home</a>
             <a href="comments.html">Comments</a>
         </div>
-        <div class="auth-buttons" id="auth-buttons" style="display: none;">
-            <button class="auth-btn login-btn" id="login-btn">Log In</button>
-            <button class="auth-btn signup-btn" id="signup-btn">Sign Up</button>
+    -->
+        <div class="auth-buttons" id="auth-buttons" style="display: flex; gap: 0.5rem; margin-left: auto;">
+            <button id="login-btn" class="auth-btn login-btn" onclick="openLoginModal()">Log In</button>
+            <button id="signup-btn" class="auth-btn signup-btn" onclick="openSignUpModal()">Sign Up</button>
         </div>
+        <!-- Sign Out Button -->
+        <button id="sign-out-btn" class="auth-btn sign-out-btn">Sign Out</button>
         <div class="user-profile" id="user-profile" style="display: none;">
             <div class="user-avatar" id="user-avatar">U</div>
             <span class="user-name" id="user-name">User</span>
         </div>
+
+        <!-- Login Modal -->
+        <div id="loginModal" class="auth-modal-overlay">
+          <div class="auth-modal">
+            <div class="auth-modal-header">
+              <span class="auth-modal-title">Login</span>
+              <button class="close-auth-modal" onclick="closeLoginModal()">&times;</button>
+            </div>
+            <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
+              <div class="form-group">
+                <label for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" required>
+              </div>
+              <div class="form-group">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" required>
+              </div>
+              <button type="submit" class="auth-submit-btn">Log In</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Sign Up Modal -->
+        <div id="signupModal" class="auth-modal-overlay">
+          <div class="auth-modal">
+            <div class="auth-modal-header">
+              <span class="auth-modal-title">Sign Up</span>
+              <button class="close-auth-modal" onclick="closeSignUpModal()">&times;</button>
+            </div>
+            <form id="signupForm" onsubmit="event.preventDefault(); handleSignUp();">
+              <div class="form-group">
+                <label for="signupEmail">Email</label>
+                <input type="email" id="signupEmail" required>
+              </div>
+              <div class="form-group">
+                <label for="signupPassword">Password</label>
+                <input type="password" id="signupPassword" required>
+              </div>
+              <button type="submit" class="auth-submit-btn">Sign Up</button>
+            </form>
+          </div>
+        </div>
+
+        <script type="module">
+// --- Firebase Initialization (ensure only once, before any usage) ---
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+// Your Firebase config object
+const firebaseConfig = {
+  // your firebase config here
+};
+
+// Initialize Firebase only once
+if (!getApps().length) {
+  initializeApp(firebaseConfig);
+}
+
+// Now you can safely use getAuth(), getFirestore(), etc.
+const auth = getAuth();
+const db = getFirestore();
+// --- End Firebase Initialization ---
+
+// Modal show/hide functions
+window.openLoginModal = function() {
+  document.getElementById('loginModal').classList.add('active');
+};
+window.closeLoginModal = function() {
+  document.getElementById('loginModal').classList.remove('active');
+};
+window.openSignUpModal = function() {
+  document.getElementById('signupModal').classList.add('active');
+};
+window.closeSignUpModal = function() {
+  document.getElementById('signupModal').classList.remove('active');
+};
+// Optional: Close modal when clicking outside modal content
+window.onclick = function(event) {
+  if (event.target === document.getElementById('loginModal')) closeLoginModal();
+  if (event.target === document.getElementById('signupModal')) closeSignUpModal();
+};
+// Firebase Auth handlers
+window.handleLogin = async function() {
+  const emailInput = document.getElementById('loginEmail');
+  const passwordInput = document.getElementById('loginPassword');
+  const email = emailInput.value;
+  const password = passwordInput.value;
+
+  // Basic validation
+  if (!email || !password) {
+    alert('Please enter both email and password.');
+    return;
+  }
+
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    // Signed in
+    const user = userCredential.user;
+    console.log('Login successful for user:', user);
+    alert('Login successful!');
+    closeLoginModal(); // Close modal on success
+    // Optionally, update UI to reflect logged-in state
+  } catch (error) {
+    console.error("Login Error:", error);
+    alert('Login failed: ' + error.message); // Show specific error message
+  }
+};
+
+window.handleSignUp = async function() {
+  const emailInput = document.getElementById('signupEmail');
+  const passwordInput = document.getElementById('signupPassword');
+  const email = emailInput.value;
+  const password = passwordInput.value;
+
+  // Basic validation
+  if (!email || !password) {
+    alert('Please enter both email and password.');
+    return;
+  }
+  // Add more robust password validation if needed (e.g., minimum length)
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    // Signed up
+    const user = userCredential.user;
+    console.log('Sign up successful for user:', user);
+    alert('Sign up successful! You are now logged in.');
+    closeSignUpModal(); // Close modal on success
+    // Optionally, update UI to reflect logged-in state
+  } catch (error) {
+    console.error("Sign Up Error:", error);
+    alert('Sign up failed: ' + error.message); // Show specific error message
+  }
+};
+</script>
+
     </header>
     
     <!-- Hero Section -->

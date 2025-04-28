@@ -1,5 +1,6 @@
 // Initialize the Firebase Pledge System
 import { initPledgeSystem } from './firebase-pledge.js';
+import { initializeApp, getApps } from 'firebase/app';
 
 // Make initPledgeSystem available globally
 window.initPledgeSystem = initPledgeSystem;
@@ -27,3 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   }, 1000); // Increased delay to ensure scripts are fully loaded
 });
+
+if (!getApps().length) {
+  initializeApp(firebaseConfig);
+}
